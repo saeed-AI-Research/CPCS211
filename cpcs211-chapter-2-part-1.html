@@ -1,0 +1,2658 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-scheme="aqua">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPCS211 Chapter 2 (Part 1)</title>
+<style>
+
+/* ===== Shared theme, base UI and schematic-editor styles (builder + player) ===== */
+html {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --r: 12px;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 45%, transparent);
+  --accent-text: var(--accent);   /* accent used as TEXT colour (darker than the fill colour in light Aqua, for contrast) */
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1218; --surface: #161d27; --surface2: #1c2532; --border: #2a3646;
+  --text: #e8eef6; --muted: #9aa8bc; --grid: #2c3849; --gate-stroke: #d6deec; --gate-fill: #19222f;
+  --ok: #34d399; --bad: #f87171; --warn: #fbbf24; --shadow: 0 8px 28px rgba(0, 0, 0, .38);
+  --w0: #60a5fa; --w1: #f472b6; --w2: #34d399; --w3: #fbbf24; --w4: #a78bfa; --w5: #fb923c; --w6: #22d3ee; --w7: #f87171;
+}
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f1f4f9; --surface: #ffffff; --surface2: #eef2f7; --border: #d3dbe6;
+  --text: #16202c; --muted: #576779; --grid: #cdd6e2; --gate-stroke: #243247; --gate-fill: #fbfcfe;
+  --ok: #059669; --bad: #dc2626; --warn: #b45309; --shadow: 0 8px 26px rgba(30, 50, 80, .12);
+  --w0: #2563eb; --w1: #db2777; --w2: #059669; --w3: #b45309; --w4: #7c3aed; --w5: #ea580c; --w6: #0891b2; --w7: #dc2626;
+}
+/* accent colour schemes */
+html[data-theme="dark"][data-scheme="blue"] { --accent: #5b9bff; --on-accent: #04122b; }
+html[data-theme="light"][data-scheme="blue"] { --accent: #2563eb; --on-accent: #ffffff; }
+html[data-theme="dark"][data-scheme="orange"] { --accent: #fb923c; --on-accent: #2a1100; }
+html[data-theme="light"][data-scheme="orange"] { --accent: #ea580c; --on-accent: #ffffff; }
+html[data-theme="dark"][data-scheme="green"] { --accent: #34d399; --on-accent: #04231a; }
+html[data-theme="light"][data-scheme="green"] { --accent: #059669; --on-accent: #ffffff; }
+html[data-theme="dark"][data-scheme="purple"] { --accent: #a78bfa; --on-accent: #190d3a; }
+html[data-theme="light"][data-scheme="purple"] { --accent: #7c3aed; --on-accent: #ffffff; }
+html[data-theme="dark"][data-scheme="crimson"] { --accent: #fb4b63; --on-accent: #33000a; }
+html[data-theme="light"][data-scheme="crimson"] { --accent: #e0112b; --on-accent: #ffffff; }
+html[data-theme="light"][data-scheme="aqua"] {   /* default look: Aqua light */
+  --accent: #06b6d4; --on-accent: #00232b; --accent-text: #0e7490;
+  --bg: #eaf7f9; --surface: #ffffff; --surface2: #e2f2f5; --border: #b9dce3; --grid: #c1dce3;
+  --text: #0c2831; --muted: #46656f; --gate-stroke: #12323d; --gate-fill: #fbfeff;
+}
+html[data-theme="dark"][data-scheme="aqua"] {
+  --accent: #22d3ee; --on-accent: #032029;
+  --bg: #08121f; --surface: #0e1f36; --surface2: #132a47; --border: #21405f; --grid: #1e3a5a; --gate-fill: #0d2038; --muted: #8fb0cf;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; -webkit-text-size-adjust: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 0 0 .5em; }
+a { color: var(--accent-text); }
+code, pre { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45em;
+  padding: .55em 1.05em; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); cursor: pointer; font-weight: 600; line-height: 1.2;
+  transition: background .15s, border-color .15s, transform .05s, opacity .15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent-line); background: color-mix(in srgb, var(--surface2) 80%, var(--accent) 20%); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn:focus-visible, .icon-btn:focus-visible, .pill:focus-visible, .ce-g:focus-visible, .ce-t:focus-visible, .ce-box:focus-visible {
+  outline: 3px solid var(--accent-line); outline-offset: 2px;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+.btn.danger { color: var(--bad); }
+.btn.danger:hover:not(:disabled) { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, var(--surface2)); }
+.btn.ghost { background: transparent; }
+.btn.big { padding: .8em 1.6em; font-size: 1.05rem; border-radius: 12px; }
+.btn.sm { padding: .3em .7em; font-size: .85rem; border-radius: 8px; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 1.1rem;
+}
+.icon-btn:hover { border-color: var(--accent-line); }
+
+/* inputs */
+.input, select.input, textarea.input {
+  width: 100%; padding: .55em .75em; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text);
+}
+.input:focus { outline: 2px solid var(--accent-line); border-color: var(--accent); }
+textarea.input { resize: vertical; min-height: 4.5em; }
+input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 1.05em; height: 1.05em; }
+
+/* cards / chips */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); }
+.chip {
+  display: inline-flex; align-items: center; gap: .35em; padding: .15em .65em; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--text); font-size: .82rem; font-weight: 600; white-space: nowrap;
+}
+.chip.plain { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+
+/* modal & toast */
+.modal-back {
+  position: fixed; inset: 0; background: rgba(5, 10, 18, .6); display: flex; align-items: center; justify-content: center;
+  padding: 1rem; z-index: 1000; backdrop-filter: blur(3px);
+}
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); max-width: 460px; width: 100%; padding: 1.4rem; }
+.modal h3 { margin-top: 0; }
+.modal .row { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.1rem; flex-wrap: wrap; }
+
+/* rich text content (prompts, hints, explanations) */
+.rich { overflow-wrap: anywhere; }
+.rich img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); display: block; margin: .5em 0; }
+.rich pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: .7em .9em; overflow-x: auto; white-space: pre-wrap; }
+.rich code { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: .05em .35em; font-size: .92em; }
+.rich pre code { background: none; border: 0; padding: 0; }
+.rich > :first-child { margin-top: 0; }
+.rich > :last-child { margin-bottom: 0; }
+.rich table { border-collapse: collapse; } .rich td, .rich th { border: 1px solid var(--border); padding: .25em .6em; }
+.rich blockquote { margin: .5em 0; padding-left: .9em; border-left: 3px solid var(--accent-line); color: var(--muted); }
+
+/* ===== schematic (static + interactive) ===== */
+.cs { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.cs-bg { fill: var(--surface2); }
+.gdot { fill: var(--grid); }
+.gbody { fill: var(--gate-fill); stroke: var(--gate-stroke); stroke-width: 2; stroke-linejoin: round; }
+.gline { fill: none; stroke: var(--gate-stroke); stroke-width: 2; }
+.gbub { fill: var(--gate-fill); stroke: var(--gate-stroke); stroke-width: 2; }
+.gstub { stroke: var(--gate-stroke); stroke-width: 2; }
+.glabel { fill: var(--muted); font: 600 12px var(--font); text-anchor: middle; pointer-events: none; }
+.ghit { fill: rgba(127, 127, 127, .001); }
+.gate .ghit { cursor: grab; }
+.gate.sel .gbody { stroke: var(--accent); stroke-width: 3; }
+.gsel { fill: var(--accent-soft); stroke: var(--accent); stroke-dasharray: 5 4; stroke-width: 1.5; }
+.gate.ghost { opacity: .6; pointer-events: none; }
+.wire { fill: none; stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.wire.sel { stroke-width: 4.6; filter: drop-shadow(0 0 3px var(--accent)); }
+.wire-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
+.wire-prev { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-dasharray: 7 5; pointer-events: none; }
+.jdot { stroke: var(--surface2); stroke-width: 1.5; pointer-events: none; }
+.tbox { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+.tbox.out { fill: var(--accent-soft); stroke: var(--accent); }
+.ttxt { fill: var(--text); font: 700 16px var(--mono); text-anchor: middle; pointer-events: none; }
+.tline { stroke: var(--gate-stroke); stroke-width: 2; }
+.pdot { fill: var(--surface2); stroke: var(--gate-stroke); stroke-width: 1.8; pointer-events: none; }
+.pdot.on { stroke-width: 1.8; }
+.phit { fill: transparent; cursor: crosshair; }
+.phit:hover { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.2; }
+.phit.hl { fill: var(--accent-soft); stroke: var(--accent-line); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.cs-int .gate, .cs-int .wire-hit, .cs-int .phit, .cs-int .term, .cs-int .tplus, .cs-int .wp-hit { touch-action: none; }
+/* input terminals (draggable, copyable) and wire corner nodes */
+.thit { fill: rgba(127, 127, 127, .001); cursor: grab; }
+.term.clone .tbox { stroke-dasharray: 4 3; }
+.term.sel .tbox { stroke: var(--accent); stroke-width: 3; }
+.tplus { cursor: copy; }
+.tplus-hit { fill: transparent; }
+.tplus-c { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.tplus:hover .tplus-c { filter: brightness(1.15); }
+.tplus-p { fill: none; stroke: var(--on-accent); stroke-width: 1.9; stroke-linecap: round; pointer-events: none; }
+.wjoint { stroke: var(--surface); stroke-width: 1.5; pointer-events: none; }
+.wjoint.sel { stroke: var(--text); }
+.wjoint.prev { fill: var(--accent); }
+.wp-hit { fill: transparent; cursor: move; }
+.cs-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+.cs-inner { min-width: 640px; }
+
+.ce { margin: .75rem 0; }
+.ce-bar { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: center; justify-content: space-between; padding: .55rem; background: var(--surface2); border: 1px solid var(--border); border-bottom: 0; border-radius: 10px 10px 0 0; }
+.ce-gates { display: flex; flex-wrap: wrap; gap: .4rem; }
+.ce-g {
+  position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: .3rem .5rem .2rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 9px; cursor: grab; touch-action: none; min-width: 66px; user-select: none; -webkit-user-select: none;
+}
+.ce-g:hover:not(.locked) { border-color: var(--accent); background: var(--accent-soft); }
+.ce-g .ci { width: 52px; height: 28px; pointer-events: none; }
+.ce-g .ci .gbody { stroke-width: 3; } .ce-g .ci .gline, .ce-g .ci .gstub, .ce-g .ci .gbub { stroke-width: 3; }
+.ce-g span { font: 700 .68rem var(--font); letter-spacing: .03em; color: var(--muted); }
+.ce-g.locked { opacity: .42; cursor: not-allowed; filter: grayscale(1); }
+.ce-g .lk { position: absolute; top: -6px; right: -4px; font-size: .75rem; font-style: normal; }
+.ce-tools { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.ce-t { padding: .35rem .65rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; font-size: .85rem; }
+.ce-t:hover:not(:disabled) { border-color: var(--accent); }
+.ce-t:disabled { opacity: .4; cursor: not-allowed; }
+.ce-t.danger { color: var(--bad); }
+.ce-pins { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .45rem; border: 1px solid var(--accent-line); border-radius: 8px; background: var(--accent-soft); font-size: .85rem; font-weight: 600; }
+.ce-pins button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 700; }
+.ce-pins button:disabled { opacity: .4; cursor: not-allowed; }
+.ce-wrap { position: relative; overflow-x: auto; border: 1px solid var(--border); border-radius: 0 0 10px 10px; background: var(--surface2); }
+.ce-box { min-width: 720px; outline: none; }
+.ce-box:focus-visible { outline: 3px solid var(--accent-line); outline-offset: -3px; }
+.ce-toast {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%) translateY(-8px); opacity: 0; pointer-events: none;
+  background: var(--text); color: var(--bg); padding: .45rem .9rem; border-radius: 9px; font-weight: 600; font-size: .88rem;
+  max-width: 90%; width: max-content; text-align: center; transition: opacity .18s, transform .18s; z-index: 3;
+}
+.ce-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.ce-status { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; font-size: .85rem; color: var(--muted); padding: .45rem .2rem 0; }
+.ce-status .over { color: var(--bad); font-weight: 700; }
+.ce-help { font-size: .8rem; color: var(--muted); padding: .2rem .2rem 0; }
+.ce-ro .ce-bar, .ce-ro .ce-help { display: none; }
+.ce-ro .ce-wrap { border-radius: 10px; }
+
+
+
+/* ===== Generated quiz player ===== */
+.pbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem clamp(.8rem, 3vw, 2rem);
+  background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20;
+}
+.pbrand { display: flex; align-items: center; gap: .65rem; font-weight: 800; min-width: 0; }
+.pbrand #pTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logo { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-size: 1.05rem; }
+.ptools { display: flex; align-items: center; gap: .5rem; flex: none; }
+.scheme-sel { width: auto; padding: .4em .6em; }
+.pmain { max-width: 1120px; margin: 0 auto; padding: 1.2rem clamp(.8rem, 3vw, 2rem) 4rem; }
+
+/* title screen */
+.hero { text-align: center; padding: clamp(1.4rem, 4vw, 2.6rem); margin-top: 1rem; }
+.hero h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: .3em; }
+.hero .meta { display: flex; flex-wrap: wrap; gap: .45rem; justify-content: center; margin: 1rem 0 1.3rem; }
+.strict-box { max-width: 560px; margin: 1.2rem auto; text-align: left; border: 1px solid var(--border); border-radius: 12px; padding: .9rem 1.1rem; background: var(--surface2); }
+.switch { display: flex; align-items: center; gap: .7rem; font-weight: 700; cursor: pointer; }
+.switch input { width: 2.6rem; height: 1.45rem; accent-color: var(--accent); }
+.howto { margin-top: 1.2rem; text-align: left; }
+.howto ul { margin: .4rem 0 0; padding-left: 1.2rem; } .howto li { margin: .25rem 0; }
+kbd { font: 600 .8em var(--mono); padding: .1em .45em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface2); }
+
+/* question screen */
+/* question picker: every question is a box. White = open, yellow = marked for review, green / red = result (strict mode) */
+html { --mark-bg: #fde047; --mark-bd: #ca8a04; --mark-ink: #2b2100; }          /* yellow stays yellow in light and dark, like .btn-hint */
+.qpick { margin: .2rem 0 1.1rem; }
+.pills { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: .2rem .35rem .35rem 0; }
+.pill { position: relative; min-width: 46px; height: 46px; padding: 0 .4rem; border-radius: 10px; border: 2px solid var(--border); background: var(--surface); color: var(--text); font: 800 1rem/1 var(--font, inherit); cursor: pointer; touch-action: manipulation; transition: transform .1s, box-shadow .15s; }
+.pill:hover { border-color: var(--accent); transform: translateY(-1px); }
+.pill.marked { background: var(--mark-bg); border-color: var(--mark-bd); color: var(--mark-ink); }
+.pill.ok { background: color-mix(in srgb, var(--ok) 32%, var(--surface)); border-color: var(--ok); color: var(--text); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 32%, var(--surface)); border-color: var(--bad); color: var(--text); }
+.pill.cur { box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px var(--text); }
+.pill .pf, .pill .pr { position: absolute; display: grid; place-items: center; line-height: 1; pointer-events: none; }
+.pill .pf { top: -7px; right: -7px; width: 18px; height: 18px; border-radius: 50%; background: var(--mark-bg); border: 1.5px solid var(--mark-bd); color: var(--mark-ink); }
+.pill .pr { bottom: 2px; right: 4px; font-size: .68rem; font-weight: 900; }
+.pill.ok .pr { color: var(--ok); } .pill.bad .pr { color: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: .25rem 1.1rem; margin-top: .5rem; font-size: .82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.legend i { display: inline-block; width: 15px; height: 15px; border-radius: 4px; border: 2px solid var(--border); background: var(--surface); }
+.legend i.m { background: var(--mark-bg); border-color: var(--mark-bd); }
+.legend i.ok { background: color-mix(in srgb, var(--ok) 32%, var(--surface)); border-color: var(--ok); }
+.legend i.bad { background: color-mix(in srgb, var(--bad) 32%, var(--surface)); border-color: var(--bad); }
+.mark-btn { margin-left: auto; display: inline-flex; align-items: center; gap: .4rem; }
+.mark-btn[aria-pressed="true"] { background: var(--mark-bg); border-color: var(--mark-bd); color: var(--mark-ink); }
+.qcard { padding: clamp(1rem, 2.5vw, 1.6rem); transition: border-color .2s, box-shadow .2s; }
+.qcard.bad { border-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 40%, transparent), var(--shadow); }
+.qhead { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }
+.qnum { font-weight: 800; font-size: 1.05rem; margin-right: .3rem; }
+.chip.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); border-color: var(--bad); color: var(--bad); }
+.qprompt { font-size: 1.05rem; }
+.qtarget { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin: 1rem 0 .6rem; padding: .7rem .9rem; background: var(--surface2); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; }
+.qtarget .lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.qtarget code { font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0 .6rem; }
+
+.btn-hint { background: #f59e0b; border-color: #f59e0b; color: #241500; }
+.btn-hint:hover:not(:disabled) { background: #fbbf24; border-color: #fbbf24; }
+.hint { margin: .7rem 0 0; padding: .7rem .9rem; border-radius: 10px; background: color-mix(in srgb, #f59e0b 13%, var(--surface)); border: 1px solid color-mix(in srgb, #f59e0b 55%, transparent); }
+.hint-h { font-weight: 800; color: #d97706; margin-bottom: .2rem; }
+html[data-theme="dark"] .hint-h { color: #fbbf24; }
+.qhints { margin: .4rem 0; } .qhints .btn-hint { margin-top: .7rem; }
+
+.qactions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .4rem 0 1rem; }
+.banner { flex: 1 1 100%; padding: .65rem .9rem; border-radius: 10px; font-weight: 700; border: 1px solid; }
+.banner.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); border-color: var(--ok); color: var(--ok); }
+.banner.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); border-color: var(--bad); color: var(--bad); }
+.banner small { display: block; font-weight: 500; color: var(--muted); }
+
+.attempts h3, .solution h3 { margin-top: 1.2rem; }
+.attempt { border: 1px solid var(--border); border-left-width: 5px; border-radius: 10px; margin: .7rem 0; background: var(--surface); }
+.attempt.bad { border-left-color: var(--bad); } .attempt.ok { border-left-color: var(--ok); }
+.attempt summary { cursor: pointer; padding: .6rem .9rem; font-weight: 700; }
+.att-badge { margin-right: .4rem; } .attempt.bad .att-badge { color: var(--bad); } .attempt.ok .att-badge { color: var(--ok); }
+.att-body { padding: 0 .9rem .9rem; }
+.att-head { font-weight: 700; margin: .7rem 0 .3rem; }
+.issues { margin: .2rem 0 0; padding-left: 1.2rem; } .issues li { margin: .35rem 0; }
+.issues .extra { margin-top: .25rem; padding: .45rem .7rem; border-radius: 8px; background: var(--surface2); border: 1px dashed var(--border); color: var(--muted); font-size: .92rem; }
+.solution { margin-top: 1.2rem; padding: 1rem 1.1rem; border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: 12px; }
+.solution h3 { margin-top: 0; } .solution details { margin-top: .8rem; } .solution summary { cursor: pointer; font-weight: 700; margin-bottom: .5rem; }
+.qnav { display: flex; justify-content: space-between; gap: .6rem; margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+
+/* results */
+.res-top { display: grid; grid-template-columns: auto 1fr; gap: 1.4rem; align-items: center; }
+.score { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; line-height: 1; color: var(--accent-text); }
+.bar { position: relative; height: 14px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.bar.ok i { background: var(--ok); } .bar.bad i { background: var(--bad); }
+.bar u { position: absolute; top: 0; bottom: 0; left: 90%; width: 2px; background: var(--text); opacity: .55; }
+.subj { margin: .9rem 0; } .subj-h { display: flex; justify-content: space-between; gap: .6rem; margin-bottom: .3rem; font-weight: 700; }
+.rounds { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+.res-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.1rem; }
+.qrow { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); margin: .6rem 0; overflow: hidden; }
+.qrow-h { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: .7rem; padding: .7rem .9rem; }
+.qrow-n { font-weight: 800; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 8px; background: var(--surface2); }
+.qrow-t { min-width: 0; } .qrow-t b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st { font-weight: 800; white-space: nowrap; } .st.ok { color: var(--ok); } .st.bad { color: var(--bad); } .st.skip { color: var(--warn); }
+.detail { padding: 0 .9rem 1rem; border-top: 1px solid var(--border); }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 1rem; margin-top: .8rem; }
+.res-tools { display: flex; justify-content: space-between; align-items: center; gap: .6rem; margin-top: 1.4rem; flex-wrap: wrap; }
+
+/* practice drill + "Corrected!" labels: a fixed aquatic accent, independent of the chosen colour scheme */
+html { --aq: #0891b2; --aq-text: #0e7490; --aq-soft: color-mix(in srgb, #06b6d4 14%, transparent); }
+html[data-theme="dark"] { --aq: #22d3ee; --aq-text: #67e8f9; --aq-soft: color-mix(in srgb, #22d3ee 14%, transparent); }
+.btn.aqua { background: var(--aq); border-color: var(--aq); color: #ffffff; }
+html[data-theme="dark"] .btn.aqua { color: #032029; }
+.btn.aqua:hover:not(:disabled) { background: color-mix(in srgb, var(--aq) 86%, #ffffff 14%); border-color: var(--aq); }
+.chip.aqua { background: var(--aq-soft); border-color: var(--aq); color: var(--aq-text); font-weight: 700; }
+.aq-text { color: var(--aq-text); }
+.drillbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .8rem; padding: .6rem .9rem; margin-bottom: .9rem; border: 1px solid var(--aq); border-radius: 12px; background: var(--aq-soft); }
+.banner.corr { background: var(--aq-soft); border-color: var(--aq); color: var(--aq-text); margin-bottom: 1rem; }
+.qrow.corrected { border-color: var(--aq); background: color-mix(in srgb, var(--aq) 8%, var(--surface)); box-shadow: inset 5px 0 0 var(--aq); }
+.stbox { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; text-align: right; }
+.stbox small { font-weight: 700; font-size: .75rem; }
+.corr-chip { display: inline-block; padding: .15em .65em; border-radius: 999px; background: var(--aq); color: #ffffff; font-weight: 800; font-size: .82rem; white-space: nowrap; }
+html[data-theme="dark"] .corr-chip { color: #032029; }
+
+/* ---- typed-answer and dropdown-step questions ---- */
+.answer { margin: 1rem 0 .4rem; padding: .9rem 1rem 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); }
+.answer.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--surface2)); }
+.alabel { display: block; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: .4rem; }
+.exprline { display: flex; align-items: center; gap: .6rem; }
+.exlhs { flex: none; font: 800 1.25rem var(--mono); }
+.exprin { flex: 1; min-width: 0; font: 600 1.2rem var(--mono); padding: .6em .75em; letter-spacing: .02em; }
+.exprin[readonly] { opacity: .85; cursor: default; }
+.keys { display: flex; flex-wrap: wrap; gap: .4rem; margin: .7rem 0 .2rem; }
+.key { min-width: 2.6rem; height: 2.6rem; padding: 0 .7rem; border-radius: 9px; border: 1px solid var(--border); border-bottom-width: 3px; background: var(--surface); color: var(--text); font: 700 1.05rem var(--mono); cursor: pointer; touch-action: manipulation; }
+.key:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.key:active:not(:disabled) { transform: translateY(1px); border-bottom-width: 2px; }
+.key:disabled { opacity: .45; cursor: not-allowed; }
+.key.op { color: var(--accent-text); }
+.key.wide { font: 600 .85rem var(--font, inherit); min-width: 3.4rem; }
+.exprprev { margin-top: .6rem; padding: .5rem .75rem; border-radius: 9px; border: 1px dashed var(--border); background: var(--surface); font-size: .95rem; min-height: 2.4rem; overflow-wrap: anywhere; }
+.exprprev.ok { border-style: solid; border-color: var(--accent-line); }
+.exprprev.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); }
+.fx { font-family: var(--mono); font-weight: 700; }
+.fx.big { font-size: 1.2rem; }
+.exmsg { margin-top: .6rem; padding: .6rem .8rem; border-radius: 9px; border: 1px solid var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); font-size: .95rem; }
+.exmsg[hidden] { display: none; }
+.ans-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin: .5rem 0; padding: .55rem .8rem; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); }
+.ans-line .lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.ans-line code { font-size: 1.1rem; overflow-wrap: anywhere; }
+.stepq { margin: 0 0 .9rem; padding: .6rem .75rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.stepq.ok { border-color: var(--ok); } .stepq.bad { border-color: var(--bad); }
+.steplbl { display: block; font-weight: 600; margin-bottom: .45rem; }
+.stepn { display: inline-block; margin-right: .35rem; padding: .05em .55em; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .78rem; font-weight: 800; }
+.selrow { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.stepsel { flex: 1 1 280px; min-width: 0; font-size: 1rem; }
+.smark { font-weight: 800; white-space: nowrap; } .stepq.ok .smark { color: var(--ok); } .stepq.bad .smark { color: var(--bad); }
+.steps-att { margin: .4rem 0; padding-left: 1.5rem; }
+.steps-att li { margin: .45rem 0; padding: .25rem .6rem; border-left: 4px solid var(--border); border-radius: 4px; }
+.steps-att li.ok { border-left-color: var(--ok); } .steps-att li.bad { border-left-color: var(--bad); } .steps-att li.skip { border-left-color: var(--warn); }
+.howto h3 { margin: 1rem 0 .2rem; } .howto h3:first-child { margin-top: 0; }
+@media (max-width: 640px) { .exprline { flex-wrap: wrap; } .exprin { flex-basis: 100%; } .key { min-width: 2.4rem; height: 2.6rem; } }
+
+@media (max-width: 640px) {
+  .res-top { grid-template-columns: 1fr; }
+  .qrow-h { grid-template-columns: auto 1fr; } .qrow-h .stbox, .qrow-h .btn { grid-column: 2; justify-self: start; align-items: flex-start; text-align: left; }
+  .pbrand #pTitle { max-width: 38vw; }
+}
+@media print { .pbar, .qactions, .qnav, .ce-bar { display: none; } }
+
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="pbar">
+    <div class="pbrand"><span class="logo" aria-hidden="true">&#8892;</span><span id="pTitle"></span></div>
+    <div class="ptools">
+      <select id="selScheme" class="input scheme-sel" aria-label="Color scheme" title="Color scheme">
+        <option value="aqua">Aqua</option>
+        <option value="blue">Blue</option>
+        <option value="orange">Orange</option>
+        <option value="green">Green</option>
+        <option value="purple">Purple</option>
+        <option value="crimson">Crimson Red</option>
+      </select>
+      <button id="btnTheme" class="icon-btn" type="button" aria-label="Toggle light and dark mode" title="Toggle light / dark mode"></button>
+    </div>
+  </header>
+  <main id="screen" class="pmain"></main>
+</div>
+<div id="modalRoot"></div>
+<noscript><p style="padding:1rem">This quiz needs JavaScript (it runs entirely offline in your browser).</p></noscript>
+
+
+<script>
+
+/* =====================================================================
+   Logic Circuit Engine
+   Shared by the Quiz Builder (authoring) and the generated Quiz Player.
+   Sections:  1 helpers  2 Boolean expressions  3 circuit model & checking
+              4 rich-text sanitizer  5 SVG schematic renderer  6 interactive editor
+   ===================================================================== */
+var Engine = (function () {
+  'use strict';
+
+  var GRID = 20, CANVAS_W = 1000;
+  var GATE_TYPES = ['AND', 'OR', 'NAND', 'NOR', 'XOR', 'XNOR', 'NOT'];
+  var Q_TYPES = ['circuit', 'expression', 'steps'];          /* question types */
+  var OUTER_OPS = ['any', 'or', 'and', 'xor'];               /* expression questions: required top-level operator */
+  var FB_KEYS = ['function', 'illegal', 'pins', 'notuse', 'depth', 'gates', 'incomplete',            /* circuit questions */
+    'syntax', 'vars', 'literal', 'outer', 'twolevel', 'canonical', 'terms', 'literals', 'dup',         /* expression questions */
+    'step'];                                                                                           /* step (dropdown) questions */
+  var MAX_WP = 24;          /* routing points per wire */
+  var MAX_COPIES = 8;       /* instances of one input terminal (original + copies) */
+
+  /* ------------------------------------------------------------ 1. helpers */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function snap(v) { return Math.round(v / GRID) * GRID; }
+  function snapX(v) { return Math.round(v / GRID) * GRID; }                    /* routing points / terminals: x on the 20-grid ... */
+  function snapY(v) { return Math.round((v - 10) / GRID) * GRID + 10; }        /* ... y on the 10-offset grid, where every pin and input sits */
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function isGateId(s) { return /^g\d+$/.test(String(s)); }
+  function termName(id) { return String(id).replace(/#\d+$/, ''); }             /* "A'#7" (a copy of input A') -> "A'" */
+  function srcKey(s) { return isGateId(s) ? s : termName(s); }                  /* identity of the SIGNAL a source carries */
+  function posInt(v) { v = Math.floor(+v); return v > 0 ? v : null; }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  /* ------------------------------------------------- 2. Boolean expressions */
+  function ExprError(msg, pos) { var e = new Error(msg); e.pos = pos; return e; }
+
+  function tokenize(src) {
+    var toks = [], i = 0;
+    while (i < src.length) {
+      var c = src.charAt(i);
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[A-Za-z]/.test(c)) toks.push({ t: 'var', v: c.toUpperCase(), pos: i });
+      else if (c === '0' || c === '1') toks.push({ t: 'const', v: +c, pos: i });
+      else if ("'\u2019\u2032`".indexOf(c) >= 0) toks.push({ t: 'prime', pos: i });
+      else if ('~!\u00AC'.indexOf(c) >= 0) toks.push({ t: 'not', pos: i });
+      else if ('+|\u2228'.indexOf(c) >= 0) toks.push({ t: 'or', pos: i });
+      else if ('*&.\u00B7\u2022\u2227'.indexOf(c) >= 0) toks.push({ t: 'and', pos: i });
+      else if ('^\u2295'.indexOf(c) >= 0) toks.push({ t: 'xor', pos: i });
+      else if (c === '(' || c === '[') toks.push({ t: 'lp', pos: i });
+      else if (c === ')' || c === ']') toks.push({ t: 'rp', pos: i });
+      else throw ExprError('Unexpected character "' + c + '"', i);
+      i++;
+    }
+    return toks;
+  }
+
+  function parseTokens(toks) {
+    var p = 0;
+    function peek() { return toks[p]; }
+    function startsUnary(k) { return k.t === 'var' || k.t === 'const' || k.t === 'lp' || k.t === 'not'; }
+    function chain(type, sub, op) {
+      var args = [sub()];
+      while (peek() && peek().t === op) { p++; args.push(sub()); }
+      return args.length === 1 ? args[0] : { t: type, args: args };
+    }
+    function parseOr() { return chain('or', parseXor, 'or'); }
+    function parseXor() { return chain('xor', parseAnd, 'xor'); }
+    function parseAnd() {
+      var args = [parseUnary()];
+      for (;;) {
+        var k = peek();
+        if (!k) break;
+        if (k.t === 'and') { p++; args.push(parseUnary()); }
+        else if (startsUnary(k)) args.push(parseUnary());
+        else break;
+      }
+      return args.length === 1 ? args[0] : { t: 'and', args: args };
+    }
+    function parseUnary() {
+      var k = peek();
+      if (!k) throw ExprError('The expression ends unexpectedly', -1);
+      if (k.t === 'not') { p++; return { t: 'not', a: parseUnary() }; }
+      var node = parsePrimary();
+      while (peek() && peek().t === 'prime') { p++; node = { t: 'not', a: node }; }
+      return node;
+    }
+    function parsePrimary() {
+      var k = toks[p++];
+      if (!k) throw ExprError('The expression ends unexpectedly', -1);
+      if (k.t === 'var') return { t: 'var', n: k.v };
+      if (k.t === 'const') return { t: 'const', v: k.v };
+      if (k.t === 'lp') {
+        var e = parseOr(), r = toks[p++];
+        if (!r || r.t !== 'rp') throw ExprError('Missing closing parenthesis', k.pos);
+        return e;
+      }
+      var shown = { rp: ')', prime: "'", or: '+', and: '*', xor: '^' }[k.t] || k.t;
+      throw ExprError('Unexpected "' + shown + '" - an operand (variable or parenthesis) was expected', k.pos);
+    }
+    var ast = parseOr();
+    if (p < toks.length) {
+      var k = toks[p];
+      throw ExprError(k.t === 'rp' ? 'Unmatched closing parenthesis' : 'Unexpected token in expression', k.pos);
+    }
+    return ast;
+  }
+
+  function collectVars(n, set) {
+    if (n.t === 'var') set[n.n] = 1;
+    else if (n.t === 'not') collectVars(n.a, set);
+    else if (n.args) n.args.forEach(function (a) { collectVars(a, set); });
+    return set;
+  }
+
+  /* parseExpression("F = AB'C + A'BD") -> {ok, ast, vars, out} | {ok:false, error} */
+  function parseExpression(src) {
+    src = String(src == null ? '' : src);
+    var out = 'F', rhs = src, eq = src.indexOf('=');
+    if (eq >= 0) {
+      var lhs = src.slice(0, eq).trim();
+      var m = lhs.match(/^([A-Za-z][A-Za-z0-9_]*)\s*(\([^)]*\))?$/);
+      if (!m) return { ok: false, error: 'The left side of "=" should be a function name such as F or F(A,B,C).' };
+      out = m[1];
+      rhs = src.slice(eq + 1);
+      if (rhs.indexOf('=') >= 0) return { ok: false, error: 'Only one "=" sign is allowed.' };
+    }
+    if (!rhs.trim()) return { ok: false, error: "Enter a Boolean expression, e.g.  F = AB'C + A'BD" };
+    try {
+      var ast = parseTokens(tokenize(rhs));
+      var vars = Object.keys(collectVars(ast, {})).sort();
+      if (!vars.length) return { ok: false, error: 'The expression must contain at least one variable.' };
+      if (vars.length > 10) return { ok: false, error: 'Too many variables (' + vars.length + '). The maximum is 10.' };
+      return { ok: true, ast: ast, vars: vars, out: out, src: src };
+    } catch (e) {
+      return { ok: false, error: e.message, pos: e.pos };
+    }
+  }
+
+  function evalAst(n, env) {
+    var i, v;
+    switch (n.t) {
+      case 'var': return env[n.n] ? 1 : 0;
+      case 'const': return n.v;
+      case 'not': return evalAst(n.a, env) ? 0 : 1;
+      case 'and': for (i = 0; i < n.args.length; i++) if (!evalAst(n.args[i], env)) return 0; return 1;
+      case 'or': for (i = 0; i < n.args.length; i++) if (evalAst(n.args[i], env)) return 1; return 0;
+      case 'xor': v = 0; for (i = 0; i < n.args.length; i++) v ^= evalAst(n.args[i], env); return v;
+    }
+    return 0;
+  }
+
+  /* All 2^N assignments; first variable is the most significant bit. */
+  function rowsFor(vars) {
+    var n = vars.length, total = 1 << n, rows = [];
+    for (var r = 0; r < total; r++) {
+      var env = {};
+      for (var i = 0; i < n; i++) env[vars[i]] = (r >> (n - 1 - i)) & 1;
+      rows.push(env);
+    }
+    return rows;
+  }
+  function minterms(parsed) {
+    var m = [];
+    rowsFor(parsed.vars).forEach(function (env, i) { if (evalAst(parsed.ast, env)) m.push(i); });
+    return m;
+  }
+
+  /* ------------------------------------------ 3. circuit model & checking */
+  /* circuit = { gates:[{id:'g1',type,nIn,x,y,flip}],
+                 wires:[{id:'w2',from,to,pts?:[{x,y},..]}],      pts = user routing points (corners), source -> sink order
+                 terms?:[{id,x,y},..],                            input-terminal instances (moved and/or copied); absent = default layout
+                 seq }
+     wire.from : terminal instance id ("A", "A'", or a copy "A#7" / "A'#7") or gate id ("g3")
+     wire.to   : "g4.0" (gate 4, pin 0) or "OUT"
+     A copy of an input is the same logical variable (termName strips the "#n"). */
+  function newCircuit() { return { gates: [], wires: [], seq: 1 }; }
+  function pinCount(g) { return g.type === 'NOT' ? 1 : g.nIn; }
+  function gateLabel(g) { return g.type + ' #' + g.id.slice(1); }
+
+  function cleanPts(a) {
+    var out = [];
+    if (Array.isArray(a)) a.slice(0, MAX_WP).forEach(function (p) {
+      if (p && isFinite(+p.x) && isFinite(+p.y)) out.push({ x: clamp(Math.round(+p.x), 0, CANVAS_W), y: clamp(Math.round(+p.y), 0, 4000) });
+    });
+    return out;
+  }
+
+  function sanitizeCircuit(c0) {
+    var c = { gates: [], wires: [], seq: 1 };
+    if (!c0 || typeof c0 !== 'object') return c;
+    var ids = {}, gmap = {}, wids = {}, sinks = {}, seq = Math.max(1, c0.seq | 0);
+    (c0.gates || []).forEach(function (g) {
+      if (!g || !isGateId(g.id) || GATE_TYPES.indexOf(g.type) < 0 || ids[g.id]) return;
+      var n = g.type === 'NOT' ? 1 : clamp(g.nIn | 0 || 2, 2, 8);
+      var ng = { id: g.id, type: g.type, nIn: n, x: +g.x || 0, y: +g.y || 0, flip: !!g.flip };
+      c.gates.push(ng); ids[g.id] = 1; gmap[g.id] = ng;
+      seq = Math.max(seq, parseInt(g.id.slice(1), 10) + 1);
+    });
+    (c0.wires || []).forEach(function (w) {
+      if (!w || typeof w.from !== 'string' || typeof w.to !== 'string') return;
+      if (isGateId(w.from) && !ids[w.from]) return;
+      var ok = w.to === 'OUT', m;
+      if (!ok && (m = /^(g\d+)\.(\d+)$/.exec(w.to)) && gmap[m[1]]) ok = (+m[2]) < pinCount(gmap[m[1]]);
+      if (!ok || sinks[w.to]) return;
+      var wid = (typeof w.id === 'string' && /^w\d+$/.test(w.id) && !wids[w.id]) ? w.id : null;
+      if (!wid) wid = 'w' + (seq++);
+      wids[wid] = 1; sinks[w.to] = 1;
+      seq = Math.max(seq, parseInt(wid.slice(1), 10) + 1);
+      var nw = { id: wid, from: w.from, to: w.to }, pts = cleanPts(w.pts);
+      if (pts.length) nw.pts = pts;
+      c.wires.push(nw);
+    });
+    var terms = [], tids = {};
+    (Array.isArray(c0.terms) ? c0.terms : []).slice(0, 96).forEach(function (t) {
+      if (!t || typeof t.id !== 'string') return;
+      var m = /^[A-Z]'?(?:#(\d+))?$/.exec(t.id);
+      if (!m || tids[t.id] || !isFinite(+t.x) || !isFinite(+t.y)) return;
+      tids[t.id] = 1;
+      terms.push({ id: t.id, x: clamp(Math.round(+t.x), 0, CANVAS_W), y: clamp(Math.round(+t.y), 0, 4000) });
+      if (m[1]) seq = Math.max(seq, +m[1] + 1);
+    });
+    if (terms.length) c.terms = terms;
+    c.seq = seq;
+    return c;
+  }
+
+  /* The input terminals actually present in circuit c: its own (moved / copied) instances when it has any, plus the default
+     instance of every required input that has none, so every input always has at least one instance. */
+  function terminalInstances(c, cfg) {
+    var L = layout(cfg), names = {}, res = [], seen = {}, have = {};
+    terminalNames(cfg).forEach(function (n) { names[n] = 1; });
+    ((c && c.terms) || []).forEach(function (t) {
+      var nm = termName(t.id);
+      if (!names[nm] || seen[t.id]) return;
+      seen[t.id] = 1; have[nm] = 1;
+      res.push({ id: t.id, name: nm, x: clamp(t.x, 80, L.W - 120), y: clamp(t.y, 24, L.H - 24), clone: t.id !== nm });
+    });
+    L.terms.forEach(function (d) { if (!have[d.id]) res.push({ id: d.id, name: d.id, x: d.x, y: d.y, clone: false }); });
+    return res;
+  }
+
+  function gateEval(type, ins) {
+    var and = 1, or = 0, par = 0, i;
+    for (i = 0; i < ins.length; i++) { if (!ins[i]) and = 0; if (ins[i]) or = 1; par ^= ins[i]; }
+    switch (type) {
+      case 'AND': return and;
+      case 'OR': return or;
+      case 'NAND': return 1 - and;
+      case 'NOR': return 1 - or;
+      case 'XOR': return par;
+      case 'XNOR': return 1 - par;
+      case 'NOT': return 1 - ins[0];
+    }
+    return 0;
+  }
+
+  /* ---- question normalisation / configuration ---- */
+  /* steps: [{label, options:[text,..], correct:index into options, feedback}] for the multi-step dropdown question type */
+  function normalizeSteps(a) {
+    var out = [];
+    (Array.isArray(a) ? a : []).slice(0, 30).forEach(function (s) {
+      if (!s || typeof s !== 'object') return;
+      var want = +s.correct | 0, keep = [], correct = 0;
+      (Array.isArray(s.options) ? s.options : []).slice(0, 12).forEach(function (o, i) {
+        o = String(o == null ? '' : o).trim();
+        if (!o) return;
+        if (i === want) correct = keep.length;
+        keep.push(o);
+      });
+      var label = String(s.label == null ? '' : s.label).trim();
+      if (!label && !keep.length) return;
+      out.push({ label: label, options: keep, correct: correct, feedback: String(s.feedback || '').trim() });
+    });
+    return out;
+  }
+
+  function normalizeQuestion(q) {
+    q = q || {};
+    var d = {
+      id: q.id || ('q' + Math.random().toString(36).slice(2, 9)),
+      type: Q_TYPES.indexOf(q.type) >= 0 ? q.type : 'circuit',
+      subject: String(q.subject || ''),
+      weight: (+q.weight > 0) ? +q.weight : 1,
+      promptHTML: String(q.promptHTML || ''),
+      target: String(q.target || ''),
+      gates: (q.gates || []).filter(function (t) { return GATE_TYPES.indexOf(t) >= 0; }),
+      pinRule: { mode: 'upto', n: 8 },
+      deMorgan: q.deMorgan !== false,
+      complements: !!q.complements,
+      noNotUse: !!q.noNotUse,
+      maxDepth: (+q.maxDepth > 0) ? Math.floor(+q.maxDepth) : null,
+      maxGates: (+q.maxGates > 0) ? Math.floor(+q.maxGates) : null,
+      /* expression questions */
+      evalMode: q.evalMode === 'literal' ? 'literal' : 'truth',
+      outerOp: OUTER_OPS.indexOf(q.outerOp) >= 0 ? q.outerOp : 'any',
+      twoLevel: !!q.twoLevel,
+      canonical: !!q.canonical,
+      noDup: !!q.noDup,
+      maxTerms: posInt(q.maxTerms),
+      maxLiterals: posInt(q.maxLiterals),
+      showTarget: !!q.showTarget,
+      modelAnswer: String(q.modelAnswer || ''),
+      /* step questions */
+      steps: normalizeSteps(q.steps),
+      hints: (q.hints || []).map(String).filter(function (h) { return h.replace(/<[^>]*>/g, '').trim() || /<img/i.test(h); }),
+      explanationHTML: String(q.explanationHTML || ''),
+      feedback: {},
+      solution: q.solution ? sanitizeCircuit(q.solution) : null
+    };
+    if (q.pinRule && (q.pinRule.mode === 'strict' || q.pinRule.mode === 'upto')) {
+      d.pinRule = { mode: q.pinRule.mode, n: clamp(q.pinRule.n | 0 || 2, 2, 8) };
+    }
+    FB_KEYS.forEach(function (k) {
+      d.feedback[k] = String((q.feedback && q.feedback[k]) || '');
+    });
+    return d;
+  }
+
+  function questionConfig(q) {
+    var p = parseExpression(q.target);
+    return {
+      parsed: p,
+      vars: p.ok ? p.vars : [],
+      outName: p.ok ? p.out : 'F',
+      gates: q.gates || [],
+      pinRule: q.pinRule || { mode: 'upto', n: 8 },
+      deMorgan: !!q.deMorgan,
+      complements: !!q.complements,
+      noNotUse: !!q.noNotUse,
+      maxDepth: q.maxDepth || null,
+      maxGates: q.maxGates || null
+    };
+  }
+
+  function terminalNames(cfg) {
+    var t = [];
+    cfg.vars.forEach(function (v) { t.push(v); if (cfg.complements) t.push(v + "'"); });
+    return t;
+  }
+
+  /* Walk the cone of logic feeding the output. */
+  function analyze(c, cfg) {
+    var gmap = {}, sinkMap = {}, terms = {};
+    c.gates.forEach(function (g) { gmap[g.id] = g; });
+    c.wires.forEach(function (w) { sinkMap[w.to] = w; });
+    terminalInstances(c, cfg).forEach(function (t) { terms[t.id] = 1; });     /* every instance (original or copy) of every input */
+    var res = { gmap: gmap, sinkMap: sinkMap, cone: [], depth: 0, incomplete: [], badSources: [], cyclic: false, hasOutput: false, unused: 0 };
+    var outW = sinkMap['OUT'];
+    if (!outW) return res;
+    res.hasOutput = true;
+    var memo = {}, state = {};
+    function visit(src) {
+      if (!isGateId(src)) {
+        if (!terms[src] && res.badSources.indexOf(src) < 0) res.badSources.push(src);
+        return 0;
+      }
+      var g = gmap[src];
+      if (!g) return 0;
+      if (memo[src] !== undefined) return memo[src];
+      if (state[src] === 1) { res.cyclic = true; return 0; }
+      state[src] = 1;
+      var d = 0, missing = [], n = pinCount(g);
+      for (var i = 0; i < n; i++) {
+        var w = sinkMap[g.id + '.' + i];
+        if (!w) { missing.push(i); continue; }
+        d = Math.max(d, visit(w.from));
+      }
+      state[src] = 2;
+      if (missing.length) res.incomplete.push({ gate: g, pins: missing });
+      res.cone.push(g);
+      memo[src] = d + 1;
+      return d + 1;
+    }
+    res.depth = visit(outW.from);
+    res.unused = c.gates.length - res.cone.length;
+    return res;
+  }
+
+  /* Value of any source (terminal "A", "A'" or gate id) under one input assignment; memo is shared per assignment. */
+  function evalSrc(an, src, env, memo) {
+    if (!isGateId(src)) {
+      var nm = termName(src), inv = nm.charAt(nm.length - 1) === "'";      /* a copy ("A#3") carries the same value as its input */
+      var v = env[inv ? nm.slice(0, -1) : nm] ? 1 : 0;
+      return inv ? 1 - v : v;
+    }
+    if (memo[src] !== undefined) return memo[src];
+    var g = an.gmap[src], ins = [], n = pinCount(g);
+    for (var i = 0; i < n; i++) ins.push(evalSrc(an, an.sinkMap[g.id + '.' + i].from, env, memo));
+    return (memo[src] = gateEval(g.type, ins));
+  }
+  function evalCircuit(an, env) { return evalSrc(an, an.sinkMap['OUT'].from, env, {}); }
+
+  /* Truth-table signature (string of 0/1 over all rows) of every source that feeds a gate in the cone.
+     Used to detect a gate whose inputs carry the same *function* (i.e. a gate acting as an inverter). */
+  function inputSignatures(an, rows) {
+    var names = {}, sig = {};
+    an.cone.forEach(function (g) {
+      for (var i = 0; i < pinCount(g); i++) { var w = an.sinkMap[g.id + '.' + i]; if (w) names[w.from] = 1; }
+    });
+    var list = Object.keys(names);
+    list.forEach(function (s) { sig[s] = ''; });
+    rows.forEach(function (env) {
+      var memo = {};
+      list.forEach(function (s) { sig[s] += evalSrc(an, s, env, memo); });
+    });
+    return sig;
+  }
+
+  function envText(env, vars) { return vars.map(function (v) { return v + '=' + env[v]; }).join(', '); }
+  function list(a, max) {
+    return a.length > max ? a.slice(0, max).join(', ') + ' and ' + (a.length - max) + ' more' : a.join(', ');
+  }
+
+  /* checkCircuit(circuit, question) -> { pass, functional, headline, issues:[{code,text,extra}], depth, gates, ... } */
+  function checkCircuit(circ, q) {
+    q = normalizeQuestion(q);
+    var cfg = questionConfig(q), c = sanitizeCircuit(circ);
+    var res = { pass: false, functional: null, headline: '', issues: [], depth: 0, gates: 0, unused: 0, rowsTotal: 0, rowsBad: 0, example: null };
+    if (!cfg.parsed.ok) {
+      res.headline = 'This question cannot be checked.';
+      res.issues.push({ code: 'config', text: 'The target expression is invalid: ' + cfg.parsed.error, extra: '' });
+      return res;
+    }
+    var an = analyze(c, cfg), fb = q.feedback || {};
+    res.depth = an.depth; res.gates = an.cone.length; res.unused = an.unused;
+    function add(code, text) { res.issues.push({ code: code, text: text, extra: fb[code] || '' }); }
+
+    if (!an.hasOutput) {
+      res.headline = 'The circuit is not finished.';
+      add('incomplete', 'The output ' + cfg.outName + ' is not connected to anything yet.');
+      return res;
+    }
+    var blocked = false, rows = rowsFor(cfg.vars);
+    if (an.cyclic) { blocked = true; add('incomplete', 'The circuit contains a feedback loop; combinational logic must not.'); }
+    if (an.incomplete.length) {
+      blocked = true;
+      add('incomplete', 'Some gate inputs are not connected: ' + list(an.incomplete.map(function (x) {
+        return gateLabel(x.gate) + ' (pin ' + x.pins.map(function (p) { return p + 1; }).join(', ') + ')';
+      }), 4) + '.');
+    }
+    if (an.badSources.length) {
+      blocked = true;
+      add('incomplete', 'Input ' + an.badSources.join(', ') + ' is not available in this question.');
+    }
+
+    /* function */
+    if (!blocked) {
+      var bad = 0, ex = null;
+      rows.forEach(function (env) {
+        var want = evalAst(cfg.parsed.ast, env), got = evalCircuit(an, env);
+        if (want !== got) { bad++; if (!ex) ex = { env: env, got: got, want: want }; }
+      });
+      res.rowsTotal = rows.length; res.rowsBad = bad; res.example = ex;
+      res.functional = bad === 0;
+      if (bad) {
+        add('function', 'The output ' + cfg.outName + ' differs from the target on ' + bad + ' of ' + rows.length +
+          ' input combinations. For example, when ' + envText(ex.env, cfg.vars) + ' your circuit gives ' + ex.got +
+          ' but ' + cfg.outName + ' should be ' + ex.want + '.');
+      }
+    }
+
+    /* structure */
+    var structural = 0;
+    function addS(code, text) { structural++; add(code, text); }
+    var illegal = {}, badPins = [];
+    an.cone.forEach(function (g) {
+      if (cfg.gates.indexOf(g.type) < 0) illegal[g.type] = (illegal[g.type] || 0) + 1;
+      if (g.type !== 'NOT') {
+        if (cfg.pinRule.mode === 'strict' && g.nIn !== cfg.pinRule.n) badPins.push(gateLabel(g) + ' has ' + g.nIn);
+        if (cfg.pinRule.mode === 'upto' && g.nIn > cfg.pinRule.n) badPins.push(gateLabel(g) + ' has ' + g.nIn);
+      }
+    });
+    var ill = Object.keys(illegal);
+    if (ill.length) {
+      addS('illegal', 'Gate types that are not allowed here: ' + ill.map(function (t) { return t + ' \u00D7' + illegal[t]; }).join(', ') +
+        '. Allowed: ' + (cfg.gates.join(', ') || 'none') + '.');
+    }
+    if (badPins.length) {
+      addS('pins', 'Pin-count rule broken (' + (cfg.pinRule.mode === 'strict' ? 'exactly ' + cfg.pinRule.n + ' inputs per gate' : 'at most ' + cfg.pinRule.n + ' inputs per gate') + '): ' + list(badPins, 3) + ' inputs.');
+    }
+    if (cfg.noNotUse) {
+      var sigs = blocked ? null : inputSignatures(an, rows), tied = [];
+      an.cone.forEach(function (g) {
+        var n = pinCount(g);
+        if (g.type === 'NOT' || n < 2) return;
+        var key = null, same = true;
+        for (var i = 0; i < n && same; i++) {
+          var w = an.sinkMap[g.id + '.' + i];
+          if (!w) { same = false; break; }
+          var k = sigs ? sigs[w.from] : srcKey(w.from);
+          if (key === null) key = k; else if (key !== k) same = false;
+        }
+        if (same) tied.push(gateLabel(g));
+      });
+      if (tied.length) {
+        addS('notuse', 'A gate is being used as a NOT gate (all of its inputs carry the same signal): ' + list(tied, 3) +
+          '. This question forbids using a gate as an inverter; use the complemented inputs or a different structure instead.');
+      }
+    }
+    if (cfg.maxDepth && an.depth > cfg.maxDepth) {
+      addS('depth', 'Your circuit has ' + plural(an.depth, 'level') + ' of logic, but at most ' + cfg.maxDepth + ' ' + (cfg.maxDepth === 1 ? 'is' : 'are') + ' allowed.');
+    }
+    if (cfg.maxGates && an.cone.length > cfg.maxGates) {
+      addS('gates', 'Your circuit uses ' + plural(an.cone.length, 'gate') + ', but at most ' + cfg.maxGates + ' ' + (cfg.maxGates === 1 ? 'is' : 'are') + ' allowed.');
+    }
+
+    if (blocked) res.headline = 'The circuit is not finished.';
+    else if (res.functional && !structural) { res.pass = true; res.headline = 'Correct! The circuit matches the target on all ' + res.rowsTotal + ' input combinations and follows every rule.'; }
+    else if (res.functional) res.headline = 'The function is correct, but the circuit breaks the rules of this question.';
+    else res.headline = 'The circuit does not implement the target function.';
+    return res;
+  }
+
+  /* ------------------------------ 3b. expression answers and step (dropdown) answers */
+  /* Canonical AST: nested AND / OR / XOR flattened, double negations removed. Used for structure checks and the exact-form comparison. */
+  function simplifyAst(n) {
+    if (n.t === 'not') { var a = simplifyAst(n.a); return a.t === 'not' ? a.a : { t: 'not', a: a }; }
+    if (n.t === 'and' || n.t === 'or' || n.t === 'xor') {
+      var args = [];
+      n.args.forEach(function (c) { c = simplifyAst(c); if (c.t === n.t) args = args.concat(c.args); else args.push(c); });
+      return args.length === 1 ? args[0] : { t: n.t, args: args };
+    }
+    return n;
+  }
+  /* Order-insensitive key: two expressions that differ only by the order of terms / factors (or spacing, redundant brackets) share a key. */
+  function astKey(n) {
+    if (n.t === 'var') return n.n;
+    if (n.t === 'const') return String(n.v);
+    if (n.t === 'not') return '!' + astKey(n.a);
+    return n.t + '(' + n.args.map(astKey).sort().join(',') + ')';
+  }
+  function isLit(n) { return n.t === 'var' || (n.t === 'not' && n.a.t === 'var'); }
+  /* a plain product (op 'and') or plain sum (op 'or') of literals; a lone literal or constant counts as both */
+  function isFlat(n, op) { return isLit(n) || n.t === 'const' || (n.t === op && n.args.every(isLit)); }
+  function countLits(n) {
+    if (n.t === 'var') return 1;
+    if (n.t === 'const') return 0;
+    if (n.t === 'not') return countLits(n.a);
+    return n.args.reduce(function (s, a) { return s + countLits(a); }, 0);
+  }
+  /* Readable text of a (canonical) AST: A + B'C(D + E)  -- `lower` prints variables in lower case to match the author's style. */
+  function fmtAst(n, lower) {
+    switch (n.t) {
+      case 'var': return lower ? n.n.toLowerCase() : n.n;
+      case 'const': return String(n.v);
+      case 'not': return (n.a.t === 'var' || n.a.t === 'const') ? fmtAst(n.a, lower) + "'" : '(' + fmtAst(n.a, lower) + ")'";
+      case 'and':
+        return n.args.map(function (a) { var s = fmtAst(a, lower); return (a.t === 'or' || a.t === 'xor') ? '(' + s + ')' : s; })
+          .join(n.args.some(function (a) { return a.t === 'const'; }) ? '·' : '');
+      case 'xor': return n.args.map(function (a) { var s = fmtAst(a, lower); return a.t === 'or' ? '(' + s + ')' : s; }).join(' ^ ');
+      default: return n.args.map(function (a) { return fmtAst(a, lower); }).join(' + ');
+    }
+  }
+  function formatExpr(ast, lower) { return fmtAst(simplifyAst(ast), lower); }
+  /* Authors who type the reference in lower case (f = ab'c + ad) get lower-case variables echoed back. */
+  function usesLowerCase(src) {
+    var rhs = String(src || '').replace(/^[^=]*=/, '');
+    return /[a-z]/.test(rhs) && !/[A-Z]/.test(rhs);
+  }
+  /* What counts as a "term": the operands of the top-level operator that the question asks for (OR by default; AND for a product of sums). */
+  function termList(a, outerOp) {
+    if (a.t === 'or' && outerOp !== 'and' && outerOp !== 'xor') return a.args;
+    if (a.t === 'and' && outerOp === 'and') return a.args;
+    if (a.t === 'xor' && outerOp === 'xor') return a.args;
+    return [a];
+  }
+  function exprStats(ast, q) {
+    var a = simplifyAst(ast);
+    return { terms: termList(a, (q && q.outerOp) || 'any').length, literals: countLits(a) };
+  }
+  function describeTop(a) {
+    return { and: 'an AND (a product)', or: 'an OR (a sum)', xor: 'an XOR', not: 'a complemented group', 'var': 'a single variable', 'const': 'a constant' }[a.t] || a.t;
+  }
+
+  /* checkExpression(text, question) -> { pass, functional, literalMatch, headline, issues:[{code,text,extra}], terms, literals, rowsTotal, rowsBad, example, expr } */
+  function checkExpression(text, q) {
+    q = normalizeQuestion(q);
+    var cfg = questionConfig(q), fb = q.feedback || {};
+    var res = { pass: false, functional: null, literalMatch: null, headline: '', issues: [], terms: 0, literals: 0, rowsTotal: 0, rowsBad: 0, example: null, expr: '' };
+    function add(code, msg) { res.issues.push({ code: code, text: msg, extra: fb[code] || '' }); }
+    if (!cfg.parsed.ok) {
+      res.headline = 'This question cannot be checked.';
+      res.issues.push({ code: 'config', text: 'The reference expression is invalid: ' + cfg.parsed.error, extra: '' });
+      return res;
+    }
+    var p = parseExpression(text);
+    if (!p.ok) { res.headline = 'Your answer could not be read.'; add('syntax', p.error); return res; }
+    var lower = usesLowerCase(q.target), A = simplifyAst(p.ast), op = q.outerOp;
+    function disp(v) { return lower ? v.toLowerCase() : v; }
+    var tl = termList(A, op);
+    res.expr = fmtAst(A, lower); res.terms = tl.length; res.literals = countLits(A);
+
+    var unknown = p.vars.filter(function (v) { return cfg.vars.indexOf(v) < 0; });
+    if (unknown.length) {
+      res.headline = 'Your expression uses a variable that is not part of this question.';
+      add('vars', 'Unknown variable' + (unknown.length > 1 ? 's' : '') + ' ' + unknown.map(disp).join(', ') + '. This question uses ' + cfg.vars.map(disp).join(', ') + '.');
+      return res;
+    }
+
+    /* 1. function: exhaustive truth-table comparison over the reference's variables */
+    var rows = rowsFor(cfg.vars), bad = 0, ex = null;
+    rows.forEach(function (env) {
+      var want = evalAst(cfg.parsed.ast, env), got = evalAst(p.ast, env);
+      if (want !== got) { bad++; if (!ex) ex = { env: env, got: got, want: want }; }
+    });
+    res.rowsTotal = rows.length; res.rowsBad = bad; res.example = ex; res.functional = bad === 0;
+    var literalMode = q.evalMode === 'literal', core;
+    if (literalMode) {
+      core = res.literalMatch = astKey(simplifyAst(cfg.parsed.ast)) === astKey(A);
+      if (!core) {
+        add('literal', 'Your expression is not in the required form. ' + (res.functional
+          ? 'It computes the right function, but this question asks for one specific expression (spacing and the order of terms and factors do not matter).'
+          : 'It also does not compute the required function.'));
+      }
+    } else {
+      core = res.functional;
+      if (bad) {
+        add('function', 'Your expression differs from the target function on ' + bad + ' of ' + rows.length + ' input combinations. For example, when ' +
+          cfg.vars.map(function (v) { return disp(v) + '=' + ex.env[v]; }).join(', ') + ' it gives ' + ex.got + ' but should give ' + ex.want + '.');
+      }
+    }
+
+    /* 2. structural rules (these run even when the function is wrong, so every problem is reported at once) */
+    var structural = 0;
+    function addS(code, msg) { structural++; add(code, msg); }
+    var outerOk = true;
+    if (op === 'or' && !(A.t === 'or' || isFlat(A, 'and'))) {
+      outerOk = false;
+      addS('outer', 'A sum of products is required, so the outermost operation must be OR (+). Yours is ' + describeTop(A) + '.');
+    } else if (op === 'and' && !(A.t === 'and' || isFlat(A, 'or'))) {
+      outerOk = false;
+      addS('outer', 'A product of sums is required, so the outermost operation must be AND. Yours is ' + describeTop(A) + '.');
+    } else if (op === 'xor' && A.t !== 'xor') {
+      outerOk = false;
+      addS('outer', 'The outermost operation must be XOR (^). Yours is ' + describeTop(A) + '.');
+    }
+    if (outerOk && q.twoLevel && (op === 'or' || op === 'and')) {
+      var inner = op === 'or' ? 'and' : 'or', notFlat = tl.filter(function (t) { return !isFlat(t, inner); });
+      if (notFlat.length) {
+        addS('twolevel', op === 'or'
+          ? "Every term must be a plain product of literals (a variable or its complement, such as A, B' or AB'C) with no nested sums. Not allowed: " + list(notFlat.map(function (t) { return fmtAst(t, lower); }), 3) + '.'
+          : "Every factor must be a plain sum of literals (such as (A + B')) with no nested products. Not allowed: " + list(notFlat.map(function (t) { return fmtAst(t, lower); }), 3) + '.');
+      }
+    }
+    if (q.canonical) {
+      var short = [];
+      tl.forEach(function (t) {
+        var tv = collectVars(t, {}), miss = cfg.vars.filter(function (v) { return !tv[v]; });
+        if (miss.length) short.push(fmtAst(t, lower) + ' (missing ' + miss.map(disp).join(', ') + ')');
+      });
+      if (short.length) {
+        addS('canonical', 'Every ' + (op === 'and' ? 'factor' : 'term') + ' must contain all ' + cfg.vars.length + ' variables (' + cfg.vars.map(disp).join(', ') + '). Incomplete: ' + list(short, 3) + '.');
+      }
+    }
+    if (q.noDup) {
+      var dups = [];
+      (function walk(n) {
+        if (n.t === 'not') { walk(n.a); return; }
+        if (!n.args) return;
+        var seen = {};
+        n.args.forEach(function (a) {
+          var k = astKey(a);
+          if (seen[k] === 1) { seen[k] = 2; dups.push(fmtAst(a, lower)); } else if (!seen[k]) seen[k] = 1;
+          walk(a);
+        });
+      })(A);
+      if (dups.length) addS('dup', 'A duplicate sub-expression is not allowed: ' + list(dups, 3) + ' appears more than once in the same sum or product.');
+    }
+    var unit = op === 'and' ? 'factor' : 'term';
+    if (q.maxTerms && res.terms > q.maxTerms) {
+      addS('terms', 'Your expression has ' + plural(res.terms, unit) + ', but at most ' + q.maxTerms + ' ' + (q.maxTerms === 1 ? 'is' : 'are') + ' allowed.');
+    }
+    if (q.maxLiterals && res.literals > q.maxLiterals) {
+      addS('literals', 'Your expression has ' + plural(res.literals, 'literal') + ', but at most ' + q.maxLiterals + ' ' + (q.maxLiterals === 1 ? 'is' : 'are') + ' allowed.');
+    }
+
+    if (core && !structural) {
+      res.pass = true;
+      res.headline = literalMode ? 'Correct! Your expression matches the required form and follows every rule.'
+        : 'Correct! Your expression matches the target on all ' + rows.length + ' input combinations and follows every rule.';
+    } else if (core) {
+      res.headline = literalMode ? 'The expression matches the required form, but it breaks other rules of this question.'
+        : 'The function is correct, but your expression breaks the rules of this question.';
+    } else {
+      res.headline = literalMode ? 'Your expression is not in the required form.' : 'Your expression does not match the target function.';
+    }
+    return res;
+  }
+
+  /* checkSteps(selection, question): selection[i] = index (into steps[i].options) the student chose, or null/undefined */
+  function checkSteps(sel, q) {
+    q = normalizeQuestion(q);
+    var fb = q.feedback || {};
+    var res = { pass: false, headline: '', issues: [], steps: [], right: 0, total: q.steps.length };
+    if (!q.steps.length) {
+      res.headline = 'This question cannot be checked.';
+      res.issues.push({ code: 'config', text: 'The question has no steps.', extra: '' });
+      return res;
+    }
+    q.steps.forEach(function (s, i) {
+      var pick = sel && sel[i], has = typeof pick === 'number' && pick >= 0 && pick < s.options.length;
+      var ok = has ? pick === s.correct : null;
+      res.steps.push({ ok: ok, pick: has ? pick : null });
+      if (ok) res.right++;
+      else if (!has) res.issues.push({ code: 'step', text: 'Step ' + (i + 1) + ' has no answer yet.', extra: '' });
+      else res.issues.push({ code: 'step', text: 'Step ' + (i + 1) + ': “' + s.options[pick] + '” is not the right choice.', extra: s.feedback || fb.step || '' });
+    });
+    res.pass = res.right === res.total;
+    res.headline = res.pass ? 'Correct! All ' + res.total + (res.total === 1 ? ' step is' : ' steps are') + ' right.' : res.right + ' of ' + res.total + ' steps are correct.';
+    return res;
+  }
+
+  /* --------------------------------------------------- 4. rich-text sanitizer */
+  var OK_TAGS = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, CODE: 1, PRE: 1, BR: 1, P: 1, DIV: 1, SPAN: 1, UL: 1, OL: 1, LI: 1, H1: 1, H2: 1, H3: 1, H4: 1, SUB: 1, SUP: 1, BLOCKQUOTE: 1, TABLE: 1, THEAD: 1, TBODY: 1, TR: 1, TD: 1, TH: 1, HR: 1, MARK: 1, SMALL: 1 };
+  var DROP_TAGS = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, LINK: 1, META: 1, SVG: 1, MATH: 1, FORM: 1, INPUT: 1, BUTTON: 1, TEXTAREA: 1, SELECT: 1, VIDEO: 1, AUDIO: 1, CANVAS: 1, TEMPLATE: 1, NOSCRIPT: 1, HEAD: 1, TITLE: 1 };
+
+  /* Keeps simple formatting, code and embedded (data:) images; drops everything else. */
+  function sanitizeHTML(html) {
+    var doc = new DOMParser().parseFromString('<body>' + String(html || '') + '</body>', 'text/html');
+    var out = document.createElement('div');
+    (function walk(src, dst) {
+      for (var n = src.firstChild; n; n = n.nextSibling) {
+        if (n.nodeType === 3) { dst.appendChild(document.createTextNode(n.nodeValue)); continue; }
+        if (n.nodeType !== 1) continue;
+        var tag = String(n.tagName).toUpperCase();
+        if (DROP_TAGS[tag]) continue;
+        if (tag === 'IMG') {
+          var s = n.getAttribute('src') || '';
+          if (/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+\/=]+$/i.test(s)) {
+            var im = document.createElement('img');
+            im.setAttribute('src', s);
+            im.setAttribute('alt', (n.getAttribute('alt') || 'image').slice(0, 200));
+            dst.appendChild(im);
+          }
+          continue;
+        }
+        if (OK_TAGS[tag]) { var el = document.createElement(tag.toLowerCase()); walk(n, el); dst.appendChild(el); }
+        else walk(n, dst);
+      }
+    })(doc.body, out);
+    return out.innerHTML;
+  }
+  function htmlToText(html) {
+    var d = document.createElement('div');
+    d.innerHTML = sanitizeHTML(html);
+    return (d.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  /* ------------------------------------------------ 5. SVG schematic renderer */
+  function layout(cfg) {
+    var names = terminalNames(cfg), n = Math.max(names.length, 1);
+    var H = Math.ceil(Math.max(440, 40 + n * 40 + 40) / GRID) * GRID;
+    return {
+      W: CANVAS_W, H: H,
+      terms: names.map(function (nm, i) { return { id: nm, x: 80, y: 50 + i * 40 }; }),
+      out: { x: CANVAS_W - 80, y: snap(H / 2) }
+    };
+  }
+
+  function gateGeom(g) {
+    var n = pinCount(g), h = Math.max(40, n * 20), ins = [];
+    for (var i = 0; i < n; i++) ins.push({ x: g.x, y: g.y + h / 2 + (i - (n - 1) / 2) * 20 });
+    return { x: g.x, y: g.y, w: 80, h: h, n: n, ins: ins, out: { x: g.x + 80, y: g.y + h / 2 } };
+  }
+
+  /* [body shape, output bubble, input bubbles] for the normal and the De Morgan symbol */
+  var SYM = {
+    AND: { n: ['AND', 0, 0], f: ['OR', 1, 1] },
+    NAND: { n: ['AND', 1, 0], f: ['OR', 0, 1] },
+    OR: { n: ['OR', 0, 0], f: ['AND', 1, 1] },
+    NOR: { n: ['OR', 1, 0], f: ['AND', 0, 1] },
+    XOR: { n: ['XOR', 0, 0], f: null },
+    XNOR: { n: ['XOR', 1, 0], f: null },
+    NOT: { n: ['NOT', 1, 0], f: ['NOT', 0, 1] }
+  };
+  function canFlip(type) { return !!(SYM[type] && SYM[type].f); }
+  function symbolOf(g, deMorgan) {
+    var e = SYM[g.type], a = (deMorgan && g.flip && e.f) ? e.f : e.n;
+    return { shape: a[0], outB: !!a[1], inB: !!a[2] };
+  }
+
+  function bodyPath(shape, h) {
+    var m = h / 2;
+    if (shape === 'AND') return 'M10,0 H40 A30,' + m + ' 0 0 1 40,' + h + ' H10 Z';
+    if (shape === 'NOT') return 'M10,0 L70,' + m + ' L10,' + h + ' Z';
+    return 'M10,0 C32,0 58,' + (h * 0.12) + ' 70,' + m + ' C58,' + (h * 0.88) + ' 32,' + h + ' 10,' + h +
+      ' C22,' + (h * 0.72) + ' 22,' + (h * 0.28) + ' 10,0 Z';
+  }
+
+  function gateInner(g, deMorgan) {
+    var n = pinCount(g), h = Math.max(40, n * 20), m = h / 2, sym = symbolOf(g, deMorgan), s = '';
+    s += '<path class="gbody" d="' + bodyPath(sym.shape, h) + '"/>';
+    if (sym.shape === 'XOR') s += '<path class="gline" d="M3,0 C15,' + (h * 0.28) + ' 15,' + (h * 0.72) + ' 3,' + h + '"/>';
+    if (sym.outB) s += '<circle class="gbub" cx="75" cy="' + m + '" r="5"/>';
+    else s += '<line class="gstub" x1="70" y1="' + m + '" x2="80" y2="' + m + '"/>';
+    for (var i = 0; i < n; i++) {
+      var py = m + (i - (n - 1) / 2) * 20, f = py / h;
+      var bx = (sym.shape === 'OR' || sym.shape === 'XOR') ? 10 + 36 * f * (1 - f) : 10;
+      if (sym.inB) {
+        s += '<circle class="gbub" cx="5" cy="' + py + '" r="5"/>';
+        if (bx > 10.5) s += '<line class="gstub" x1="10" y1="' + py + '" x2="' + bx.toFixed(1) + '" y2="' + py + '"/>';
+      } else s += '<line class="gstub" x1="0" y1="' + py + '" x2="' + bx.toFixed(1) + '" y2="' + py + '"/>';
+    }
+    return s;
+  }
+
+  function gateSVG(g, o) {
+    var n = pinCount(g), h = Math.max(40, n * 20);
+    var s = '<g class="gate' + (o.sel ? ' sel' : '') + (o.ghost ? ' ghost' : '') + '"' +
+      (o.interactive && g.id ? ' data-gate="' + g.id + '"' : '') + ' transform="translate(' + g.x + ',' + g.y + ')">';
+    s += '<rect class="ghit" x="0" y="-4" width="80" height="' + (h + 8) + '"/>';
+    if (o.sel) s += '<rect class="gsel" x="-8" y="-8" width="96" height="' + (h + 32) + '" rx="8"/>';
+    s += gateInner(g, o.deMorgan);
+    if (g.id && !o.ghost) s += '<text class="glabel" x="40" y="' + (h + 15) + '">' + g.type + ' #' + g.id.slice(1) + '</text>';
+    return s + '</g>';
+  }
+
+  function iconSVG(type) {
+    var g = { type: type, nIn: type === 'NOT' ? 1 : 2 };
+    var h = type === 'NOT' ? 40 : 40;
+    return '<svg class="ci" viewBox="-4 -4 88 ' + (h + 8) + '" aria-hidden="true">' + gateInner(g, false) + '</svg>';
+  }
+
+  function route(a, b, jitter) {
+    var x1 = a.x, y1 = a.y, x2 = b.x, y2 = b.y;
+    if (x2 - x1 >= 30) {
+      var mx = Math.round((x1 + (x2 - x1) / 2) / 10) * 10 + (jitter || 0);
+      mx = clamp(mx, x1 + 12, x2 - 12);
+      return [[x1, y1], [mx, y1], [mx, y2], [x2, y2]];
+    }
+    var ym = Math.abs(y1 - y2) >= 40 ? Math.round((y1 + y2) / 20) * 10 : Math.max(y1, y2) + 50;
+    return [[x1, y1], [x1 + 16, y1], [x1 + 16, ym], [x2 - 16, ym], [x2 - 16, y2], [x2, y2]];
+  }
+  function pathOf(pts) { return 'M' + pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' L'); }
+
+  /* Drop repeated points and the middle point of any three collinear axis-aligned points. */
+  function tidyPts(p) {
+    var i, a = [p[0]];
+    for (i = 1; i < p.length; i++) if (p[i][0] !== a[a.length - 1][0] || p[i][1] !== a[a.length - 1][1]) a.push(p[i]);
+    var r = [a[0]];
+    for (i = 1; i < a.length - 1; i++) {
+      var A = r[r.length - 1], B = a[i], C = a[i + 1];
+      if ((A[0] === B[0] && B[0] === C[0]) || (A[1] === B[1] && B[1] === C[1])) continue;
+      r.push(B);
+    }
+    if (a.length > 1) r.push(a[a.length - 1]);
+    return r;
+  }
+  /* Orthogonal route from source a to sink b through the user's routing points `wps` ([{x,y}], source -> sink order).
+     Between two points the wire runs horizontal-then-vertical, except the final leg into the sink, which runs
+     vertical-then-horizontal so that it always enters a pin horizontally. With no routing points: the automatic route. */
+  function routeVia(a, wps, b, jitter) {
+    if (!wps || !wps.length) return route(a, b, jitter);
+    var anchors = [a].concat(wps, [b]), pts = [[a.x, a.y]];
+    for (var i = 1; i < anchors.length; i++) {
+      var P = anchors[i - 1], Q = anchors[i];
+      if (P.x !== Q.x && P.y !== Q.y) pts.push(i === anchors.length - 1 ? [P.x, Q.y] : [Q.x, P.y]);
+      pts.push([Q.x, Q.y]);
+    }
+    return tidyPts(pts);
+  }
+
+  /* Build the schematic as an SVG string.
+     o: { interactive, sel:{type:'gate'|'wire'|'term',id}, wiring:{from,pts,cx,cy}, ghost:gate, deMorgan } */
+  function buildSVG(c, cfg, o) {
+    o = o || {};
+    var L = layout(cfg), TI = terminalInstances(c, cfg), tnames = terminalNames(cfg), gm = {}, tm = {}, out = [], i;
+    c.gates.forEach(function (g) { gm[g.id] = g; });
+    TI.forEach(function (t) { tm[t.id] = t; });
+    var outName = (cfg.outName || 'F').slice(0, 4);
+
+    function srcPos(id) {
+      if (isGateId(id)) return gm[id] ? gateGeom(gm[id]).out : null;
+      return tm[id] || null;
+    }
+    function sinkPos(id) {
+      if (id === 'OUT') return L.out;
+      var m = /^(g\d+)\.(\d+)$/.exec(id);
+      return (m && gm[m[1]]) ? gateGeom(gm[m[1]]).ins[+m[2]] : null;
+    }
+    function colorIdx(src) {                          /* every copy of an input shares that input's colour */
+      if (isGateId(src)) return parseInt(src.slice(1), 10) % 8;
+      var k = tnames.indexOf(termName(src));
+      return k < 0 ? 0 : k % 8;
+    }
+
+    out.push('<svg class="cs' + (o.interactive ? ' cs-int' : '') + '" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + L.W + ' ' + L.H +
+      '" role="img" aria-label="Logic circuit schematic">');
+    if (o.interactive) {
+      out.push('<defs><pattern id="csgrid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.1" class="gdot"/></pattern></defs>');
+    }
+    out.push('<rect class="cs-bg" width="' + L.W + '" height="' + L.H + '"/>');
+    if (o.interactive) out.push('<rect width="' + L.W + '" height="' + L.H + '" fill="url(#csgrid)"/>');
+
+    /* input terminals: a box + stub left of the port (x,y). Interactive: the box drags, the "+" badge adds a copy. */
+    TI.forEach(function (t) {
+      var isSel = o.sel && o.sel.type === 'term' && o.sel.id === t.id, bx = t.x - 68;
+      out.push('<g class="term' + (t.clone ? ' clone' : '') + (isSel ? ' sel' : '') + '"' + (o.interactive ? ' data-term="' + esc(t.id) + '"' : '') + '>' +
+        (o.interactive ? '<rect class="thit" x="' + (bx - 3) + '" y="' + (t.y - 17) + '" width="56" height="34" rx="9"/>' : '') +
+        '<line class="tline" x1="' + (t.x - 18) + '" y1="' + t.y + '" x2="' + t.x + '" y2="' + t.y + '"/>' +
+        '<rect class="tbox" x="' + bx + '" y="' + (t.y - 14) + '" width="50" height="28" rx="7"/>' +
+        '<text class="ttxt" x="' + (bx + 25) + '" y="' + (t.y + 5.5) + '">' + esc(t.name) + '</text></g>');
+      if (o.interactive) {
+        var px = t.x - 18, py = t.y - 14;
+        out.push('<g class="tplus" data-clone="' + esc(t.id) + '"><title>Add another copy of input ' + esc(t.name) + '</title>' +
+          '<circle class="tplus-hit" cx="' + px + '" cy="' + py + '" r="11"/><circle class="tplus-c" cx="' + px + '" cy="' + py + '" r="7"/>' +
+          '<path class="tplus-p" d="M' + (px - 3.5) + ',' + py + ' H' + (px + 3.5) + ' M' + px + ',' + (py - 3.5) + ' V' + (py + 3.5) + '"/></g>');
+      }
+    });
+    out.push('<g class="term"><line class="tline" x1="' + L.out.x + '" y1="' + L.out.y + '" x2="' + (L.out.x + 22) + '" y2="' + L.out.y + '"/>' +
+      '<rect class="tbox out" x="' + (L.out.x + 22) + '" y="' + (L.out.y - 14) + '" width="52" height="28" rx="7"/>' +
+      '<text class="ttxt" x="' + (L.out.x + 48) + '" y="' + (L.out.y + 5.5) + '">' + esc(outName) + '</text></g>');
+
+    /* wires */
+    var perSrc = {}, usedSrc = {}, sinkColor = {};
+    c.wires.forEach(function (w) { perSrc[w.from] = (perSrc[w.from] || 0) + 1; });
+    var wireSel = [], wireNorm = [], dots = [], joints = [];
+    c.wires.forEach(function (w) {
+      var a = srcPos(w.from), b = sinkPos(w.to);
+      if (!a || !b) return;
+      var ci = colorIdx(w.from), col = 'var(--w' + ci + ')';
+      var pts = routeVia(a, w.pts, b, ((ci * 3) % 5 - 2) * 6);
+      usedSrc[w.from] = col; sinkColor[w.to] = col;
+      var isSel = o.sel && o.sel.type === 'wire' && o.sel.id === w.id;
+      var svg = (o.interactive ? '<path class="wire-hit" data-wire="' + w.id + '" d="' + pathOf(pts) + '"/>' : '') +
+        '<path class="wire' + (isSel ? ' sel' : '') + '" style="stroke:' + col + '" d="' + pathOf(pts) + '"/>';
+      (isSel ? wireSel : wireNorm).push(svg);
+      if (perSrc[w.from] > 1) { var jp = pts[1] || pts[0]; dots.push('<circle class="jdot" cx="' + jp[0] + '" cy="' + jp[1] + '" r="4" style="fill:' + col + '"/>'); }
+      /* visible joint nodes at the user's routing points; interactive ones can be dragged */
+      (w.pts || []).forEach(function (p, j) {
+        joints.push((o.interactive ? '<circle class="wp-hit" data-wire="' + w.id + '" data-wp="' + j + '" cx="' + p.x + '" cy="' + p.y + '" r="9"/>' : '') +
+          '<circle class="wjoint' + (isSel ? ' sel' : '') + '" cx="' + p.x + '" cy="' + p.y + '" r="' + (isSel ? 5.5 : 4.2) + '" style="fill:' + col + '"/>');
+      });
+    });
+    out.push('<g class="wires">' + wireNorm.join('') + wireSel.join('') + dots.join('') + joints.join('') + '</g>');
+
+    /* gates */
+    c.gates.forEach(function (g) {
+      out.push(gateSVG(g, { interactive: o.interactive, deMorgan: o.deMorgan, sel: o.sel && o.sel.type === 'gate' && o.sel.id === g.id }));
+    });
+
+    /* ports */
+    var hlSinks = o.wiring && o.wiring.from.k === 'src', hlSrcs = o.wiring && o.wiring.from.k === 'sink';
+    function port(x, y, on, col, hl) {
+      return (o.interactive ? '<circle class="phit' + (hl ? ' hl' : '') + '" cx="' + x + '" cy="' + y + '" r="10"/>' : '') +
+        '<circle class="pdot' + (on ? ' on' : '') + '" cx="' + x + '" cy="' + y + '" r="4.2"' + (on ? ' style="fill:' + col + ';stroke:' + col + '"' : '') + '/>';
+    }
+    var ports = [];
+    TI.forEach(function (t) { ports.push(port(t.x, t.y, !!usedSrc[t.id], usedSrc[t.id], hlSrcs)); });
+    ports.push(port(L.out.x, L.out.y, !!sinkColor['OUT'], sinkColor['OUT'], hlSinks));
+    c.gates.forEach(function (g) {
+      var geo = gateGeom(g);
+      ports.push(port(geo.out.x, geo.out.y, !!usedSrc[g.id], usedSrc[g.id], hlSrcs));
+      for (i = 0; i < geo.n; i++) ports.push(port(geo.ins[i].x, geo.ins[i].y, !!sinkColor[g.id + '.' + i], sinkColor[g.id + '.' + i], hlSinks));
+    });
+    out.push('<g class="ports">' + ports.join('') + '</g>');
+
+    /* wiring preview & ghost gate */
+    if (o.wiring) {
+      var f = o.wiring.from, cur = { x: o.wiring.cx, y: o.wiring.cy }, wp = o.wiring.pts || [];
+      var pr = f.k === 'src' ? routeVia(f, wp, cur, 0) : routeVia(cur, wp.slice().reverse(), f, 0);
+      out.push('<path class="wire-prev" d="' + pathOf(pr) + '"/>');
+      wp.forEach(function (p) { out.push('<circle class="wjoint prev" cx="' + p.x + '" cy="' + p.y + '" r="4.6"/>'); });
+    }
+    if (o.ghost) out.push(gateSVG(o.ghost, { ghost: true, deMorgan: o.deMorgan }));
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  function renderStatic(c, cfg, o) {
+    o = o || {};
+    return '<div class="cs-scroll"><div class="cs-inner">' + buildSVG(sanitizeCircuit(c), cfg, { deMorgan: cfg.deMorgan }) + '</div></div>';
+  }
+
+  /* ------------------------------------------------- 6. interactive editor */
+  function createEditor(host, o) {
+    var cfg = o.config;
+    var c = sanitizeCircuit(o.circuit || newCircuit());
+    var readOnly = !!o.readOnly;
+    var onChange = o.onChange || function () {};
+    var L = layout(cfg);
+    var sel = null, wiring = null, ghost = null, drag = null, palette = null, lastTap = null, tdrag = null, wdrag = null;
+    var hist = [], hi = -1, rafId = 0, toastTimer = 0, namesSig = terminalNames(cfg).join('|');
+
+    host.classList.add('ce');
+    host.innerHTML = '<div class="ce-bar"></div><div class="ce-wrap"><div class="ce-box" tabindex="0" aria-label="Circuit canvas"></div><div class="ce-toast" role="status"></div></div><div class="ce-status"></div><div class="ce-help"></div>';
+    var bar = host.querySelector('.ce-bar'), box = host.querySelector('.ce-box');
+    var toastEl = host.querySelector('.ce-toast'), statusEl = host.querySelector('.ce-status'), helpEl = host.querySelector('.ce-help');
+
+    function snapshot() { return JSON.stringify(c); }
+    function commit() {
+      hist = hist.slice(0, hi + 1); hist.push(snapshot());
+      if (hist.length > 120) hist.shift();
+      hi = hist.length - 1;
+      render(); onChange(clone(c));
+    }
+    function toast(msg) {
+      toastEl.textContent = msg; toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2800);
+    }
+    function gateById(id) { for (var k = 0; k < c.gates.length; k++) if (c.gates[k].id === id) return c.gates[k]; return null; }
+    function defaultPins() { var r = cfg.pinRule; return r.mode === 'strict' ? r.n : Math.min(2, r.n); }
+    function clampGate(g) {
+      var h = Math.max(40, pinCount(g) * 20);
+      g.x = clamp(snap(g.x), 120, L.W - 200);
+      g.y = clamp(snap(g.y), 20, Math.max(20, snap(L.H - h - 10)));
+    }
+    function renderSoon() {
+      if (rafId) return;
+      var cb = function () { rafId = 0; render(); };
+      rafId = window.requestAnimationFrame ? window.requestAnimationFrame(cb) : setTimeout(cb, 16);
+    }
+
+    /* ---- toolbar ---- */
+    function renderBar() {
+      var h = '<div class="ce-gates" role="group" aria-label="Gate toolbar">';
+      GATE_TYPES.forEach(function (t) {
+        var ok = cfg.gates.indexOf(t) >= 0;
+        h += '<button type="button" class="ce-g' + (ok ? '' : ' locked') + '" data-type="' + t + '" title="' +
+          (ok ? 'Drag a ' + t + ' gate onto the canvas (or click to add it)' : t + ' gates are not allowed in this question') + '">' +
+          iconSVG(t) + '<span>' + t + '</span>' + (ok ? '' : '<i class="lk" aria-hidden="true">\uD83D\uDD12</i>') + '</button>';
+      });
+      h += '</div><div class="ce-tools">' +
+        '<button type="button" class="ce-t" data-act="wp" hidden title="Remove the last routing point of the wire you are drawing, or cancel the wire (Esc or right-click)">\u2936 Undo point</button>' +
+        '<span class="ce-pins" hidden><span>Inputs</span><button type="button" data-act="pm" aria-label="Fewer inputs">\u2212</button><b>2</b><button type="button" data-act="pp" aria-label="More inputs">+</button></span>' +
+        '<button type="button" class="ce-t" data-act="flip" title="Swap between the standard and De Morgan symbol (Space or double-click)">\u21C4 Flip symbol</button>' +
+        '<button type="button" class="ce-t" data-act="clonet" title="Add another copy of the selected input terminal (or press its + badge)">\u29C9 Copy input</button>' +
+        '<button type="button" class="ce-t" data-act="del" title="Delete the selected gate, wire or extra input copy (Delete)">\uD83D\uDDD1 Delete</button>' +
+        '<button type="button" class="ce-t" data-act="undo" title="Undo (Ctrl+Z)">\u21B6</button>' +
+        '<button type="button" class="ce-t" data-act="redo" title="Redo (Ctrl+Y)">\u21B7</button>' +
+        '<button type="button" class="ce-t danger" data-act="clear" title="Remove every gate and wire, and put the inputs back in their default places">\u27F2 Reset</button></div>';
+      bar.innerHTML = h;
+      var parts = ['Drag gates from the toolbar onto the grid.',
+        'Wire up: click an output (or an input terminal), optionally click empty grid points to add routing corners, then click a gate input pin \u2014 or just drag straight between two ports.',
+        'While routing, Esc or right-click removes the last corner (then cancels the wire).',
+        'Drag an input box to move it; its + badge adds another copy of that input, so you can place it right next to the gate that needs it.',
+        'A terminal may feed several pins (even on the same gate).'];
+      if (cfg.deMorgan) parts.push('Double-click or press Space to flip a gate between its standard and De Morgan symbol.');
+      parts.push('Delete / right-click removes the selected gate, wire or extra input copy; double-click a wire corner to remove just that corner.');
+      helpEl.textContent = parts.join(' ');
+    }
+
+    function updateTools() {
+      var g = sel && sel.type === 'gate' ? gateById(sel.id) : null;
+      var pinsEl = bar.querySelector('.ce-pins');
+      var canPins = !!(g && g.type !== 'NOT' && cfg.pinRule.mode === 'upto' && cfg.pinRule.n > 2);
+      pinsEl.hidden = !canPins;
+      if (canPins) {
+        pinsEl.querySelector('b').textContent = g.nIn;
+        pinsEl.querySelector('[data-act=pm]').disabled = g.nIn <= 2;
+        pinsEl.querySelector('[data-act=pp]').disabled = g.nIn >= cfg.pinRule.n;
+      }
+      var flipBtn = bar.querySelector('[data-act=flip]');
+      flipBtn.hidden = !cfg.deMorgan;
+      flipBtn.disabled = !(g && cfg.deMorgan && canFlip(g.type));
+      bar.querySelector('[data-act=wp]').hidden = !(wiring && !wiring.down);
+      bar.querySelector('[data-act=clonet]').disabled = !(sel && sel.type === 'term');
+      bar.querySelector('[data-act=del]').disabled = !sel;
+      bar.querySelector('[data-act=undo]').disabled = hi <= 0;
+      bar.querySelector('[data-act=redo]').disabled = hi >= hist.length - 1;
+    }
+    function updateStatus() {
+      var an = analyze(c, cfg), h = '';
+      var gOver = cfg.maxGates && an.cone.length > cfg.maxGates, dOver = cfg.maxDepth && an.depth > cfg.maxDepth;
+      h += '<span class="' + (gOver ? 'over' : '') + '">Gates in use: <b>' + an.cone.length + '</b>' + (cfg.maxGates ? ' / ' + cfg.maxGates : '') + '</span>';
+      h += '<span class="' + (dOver ? 'over' : '') + '">Levels: <b>' + (an.hasOutput ? an.depth : '\u2013') + '</b>' + (cfg.maxDepth ? ' / ' + cfg.maxDepth : '') + '</span>';
+      if (!an.hasOutput) h += '<span>Output ' + esc(cfg.outName) + ' not connected</span>';
+      if (an.unused > 0) h += '<span>' + plural(an.unused, 'unused gate') + ' (ignored)</span>';
+      statusEl.innerHTML = h;
+    }
+    function render() {
+      var o2 = { interactive: !readOnly, sel: readOnly ? null : sel, deMorgan: cfg.deMorgan };
+      if (!readOnly) { if (wiring) o2.wiring = wiring; if (ghost) o2.ghost = ghost; }
+      box.innerHTML = buildSVG(c, cfg, o2);
+      updateTools(); updateStatus();
+    }
+
+    /* ---- geometry / hit-testing ---- */
+    function pt(e) {
+      var svg = box.querySelector('svg');
+      if (!svg) return { x: 0, y: 0 };
+      var r = svg.getBoundingClientRect();
+      return { x: (e.clientX - r.left) * L.W / (r.width || L.W), y: (e.clientY - r.top) * L.H / (r.height || L.H) };
+    }
+    function inBox(e) {
+      var r = box.getBoundingClientRect();
+      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    }
+    function insts() { return terminalInstances(c, cfg); }
+    function allPorts() {
+      var P = [];
+      insts().forEach(function (t) { P.push({ k: 'src', id: t.id, x: t.x, y: t.y }); });
+      c.gates.forEach(function (g) {
+        var geo = gateGeom(g);
+        P.push({ k: 'src', id: g.id, x: geo.out.x, y: geo.out.y });
+        geo.ins.forEach(function (p, i) { P.push({ k: 'sink', id: g.id + '.' + i, x: p.x, y: p.y }); });
+      });
+      P.push({ k: 'sink', id: 'OUT', x: L.out.x, y: L.out.y });
+      return P;
+    }
+    function portAt(p, r) {
+      var best = null, bd = r * r;
+      allPorts().forEach(function (q) {
+        var d = (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y);
+        if (d <= bd) { bd = d; best = q; }
+      });
+      return best;
+    }
+    function overlaps(x, y, w, h) {
+      return c.gates.some(function (g) {
+        var q = gateGeom(g);
+        return x < q.x + q.w + 20 && x + w + 20 > q.x && y < q.y + q.h + 16 && y + h + 16 > q.y;
+      });
+    }
+    function freeSpot(h) {
+      for (var x = 240; x <= L.W - 240; x += 140) for (var y = 20; y <= L.H - h - 20; y += 20) if (!overlaps(x, y, 80, h)) return { x: x, y: y };
+      return { x: 240, y: 20 };
+    }
+
+    /* ---- mutations ---- */
+    function addGate(type, x, y) {
+      if (cfg.gates.indexOf(type) < 0) { toast(type + ' gates are not allowed in this question.'); render(); return; }
+      var g = { id: 'g' + (c.seq++), type: type, nIn: type === 'NOT' ? 1 : defaultPins(), x: x, y: y, flip: false };
+      clampGate(g);
+      c.gates.push(g);
+      sel = { type: 'gate', id: g.id };
+      commit();
+    }
+    function addAtFreeSpot(type) {
+      var n = type === 'NOT' ? 1 : defaultPins(), h = Math.max(40, n * 20), s = freeSpot(h);
+      addGate(type, s.x, s.y);
+    }
+    function wouldCycle(srcGate, sinkGate) {
+      if (srcGate === sinkGate) return true;
+      var seen = {}, stack = [sinkGate];
+      while (stack.length) {
+        var id = stack.pop();
+        if (id === srcGate) return true;
+        if (seen[id]) continue;
+        seen[id] = 1;
+        c.wires.forEach(function (w) { if (w.from === id && w.to !== 'OUT') stack.push(w.to.split('.')[0]); });
+      }
+      return false;
+    }
+    /* wps = routing points collected while drawing, in the order they were clicked (starting from the end the wire was started at) */
+    function connect(a, b, wps) {
+      var src, sink, pts = (wps || []).map(function (p) { return { x: p.x, y: p.y }; });
+      if (a.k === 'src' && b.k === 'sink') { src = a; sink = b; }
+      else if (a.k === 'sink' && b.k === 'src') { src = b; sink = a; pts.reverse(); }     /* drawn sink -> source: store source -> sink */
+      else { toast('Connect an output (or input terminal) to a gate input pin.'); return false; }
+      if (sink.id !== 'OUT' && isGateId(src.id) && wouldCycle(src.id, sink.id.split('.')[0])) { toast('That would create a feedback loop.'); return false; }
+      c.wires = c.wires.filter(function (w) { return w.to !== sink.id; });
+      var nw = { id: 'w' + (c.seq++), from: src.id, to: sink.id };
+      if (pts.length) nw.pts = pts;
+      c.wires.push(nw);
+      sel = null;
+      commit();
+      return true;
+    }
+    function deleteGate(id) {
+      c.gates = c.gates.filter(function (g) { return g.id !== id; });
+      c.wires = c.wires.filter(function (w) { return w.from !== id && w.to.split('.')[0] !== id; });
+      sel = null; commit();
+    }
+    function deleteWire(id) { c.wires = c.wires.filter(function (w) { return w.id !== id; }); sel = null; commit(); }
+
+    /* ---- input terminals: move, copy, delete ---- */
+    function ensureTerms() {            /* make the terminal layout explicit (so single terminals can be moved, copied or deleted) */
+      if (c.terms && c.terms.length) return;
+      c.terms = insts().map(function (t) { return { id: t.id, x: t.x, y: t.y }; });
+    }
+    function termById(id) { var a = insts(); for (var k = 0; k < a.length; k++) if (a[k].id === id) return a[k]; return null; }
+    function termStored(id) { for (var k = 0; k < c.terms.length; k++) if (c.terms[k].id === id) return c.terms[k]; return null; }
+    function clampTerm(p) {
+      return { x: clamp(snapX(p.x), 80, snapX(L.W - 120)), y: clamp(snapY(p.y), 30, snapY(L.H - 30)) };
+    }
+    function termFree(x, y, skipId) {   /* is there room for a terminal box (+ stub) with its port at (x,y)? */
+      var ok = insts().every(function (t) { return t.id === skipId || Math.abs(t.x - x) >= 80 || Math.abs(t.y - y) >= 34; });
+      return ok && !c.gates.some(function (g) {
+        var q = gateGeom(g);
+        return x - 72 < q.x + q.w + 6 && x + 6 > q.x - 6 && y - 18 < q.y + q.h + 6 && y + 18 > q.y - 6;
+      });
+    }
+    function cloneTerm(id) {
+      var t = termById(id);
+      if (!t) return;
+      if (insts().filter(function (x) { return x.name === t.name; }).length >= MAX_COPIES) { toast('That input already has the maximum number of copies.'); return; }
+      var spot = null, xs = [t.x + 120, t.x + 240, t.x + 360, t.x + 60], ys = [20, -20, 40, -40, 0, 60, -60, 80, -80, 120, -120];
+      for (var a = 0; a < xs.length && !spot; a++) for (var b = 0; b < ys.length && !spot; b++) {
+        var q = clampTerm({ x: xs[a], y: t.y + ys[b] });
+        if (termFree(q.x, q.y, null)) spot = q;
+      }
+      if (!spot) spot = clampTerm({ x: t.x + 120, y: t.y });
+      ensureTerms();
+      var nid = t.name + '#' + (c.seq++);
+      c.terms.push({ id: nid, x: spot.x, y: spot.y });
+      sel = { type: 'term', id: nid };
+      commit();
+    }
+    function deleteTerm(id) {
+      var t = termById(id);
+      if (!t) return;
+      if (insts().filter(function (x) { return x.name === t.name; }).length < 2) {
+        toast('Every input needs at least one copy — ' + t.name + ' cannot be removed.');
+        return;
+      }
+      ensureTerms();
+      c.terms = c.terms.filter(function (x) { return x.id !== id; });
+      c.wires = c.wires.filter(function (w) { return w.from !== id; });      /* wires attached to the removed copy go with it */
+      sel = null; commit();
+    }
+    function moveTerm(id, x, y) {
+      ensureTerms();
+      var s = termStored(id), q = clampTerm({ x: x, y: y });
+      if (!s) return false;
+      var changed = s.x !== q.x || s.y !== q.y;
+      s.x = q.x; s.y = q.y;
+      return changed;
+    }
+
+    /* ---- routing points of the wire being drawn / of existing wires ---- */
+    function insideGate(p) {
+      return c.gates.some(function (g) {
+        var q = gateGeom(g);
+        return p.x >= q.x - 4 && p.x <= q.x + q.w + 4 && p.y >= q.y - 4 && p.y <= q.y + q.h + 4;
+      });
+    }
+    function placeWaypoint(p) {
+      var f = wiring.from, w = { x: clamp(snapX(p.x), 20, L.W - 20), y: clamp(snapY(p.y), 10, L.H - 10) };
+      var last = wiring.pts.length ? wiring.pts[wiring.pts.length - 1] : { x: f.x, y: f.y };
+      if (w.x === last.x && w.y === last.y) return;
+      if (insideGate(w)) { toast('Place routing corners on empty grid, not on top of a gate.'); return; }
+      if (wiring.pts.length >= MAX_WP) { toast('That wire already has the maximum number of corners.'); return; }
+      wiring.pts.push(w);
+      render();
+    }
+    function backWire() {               /* Esc / right-click while routing: drop the last corner, else cancel the wire */
+      if (!wiring) return false;
+      if (wiring.pts.length) wiring.pts.pop(); else wiring = null;
+      render();
+      return true;
+    }
+    function removeCorner(wid, idx) {
+      var w = null;
+      c.wires.forEach(function (x) { if (x.id === wid) w = x; });
+      if (!w || !w.pts || !w.pts[idx]) return;
+      w.pts.splice(idx, 1);
+      if (!w.pts.length) delete w.pts;
+      commit();
+    }
+    function deleteSel() {
+      if (!sel) return;
+      if (sel.type === 'gate') deleteGate(sel.id);
+      else if (sel.type === 'term') deleteTerm(sel.id);
+      else deleteWire(sel.id);
+    }
+    function flip() {
+      var g = sel && sel.type === 'gate' ? gateById(sel.id) : null;
+      if (!g) return;
+      if (!cfg.deMorgan) { toast('De Morgan symbols are disabled for this question.'); return; }
+      if (!canFlip(g.type)) { toast(g.type + ' gates have no De Morgan alternative symbol.'); return; }
+      g.flip = !g.flip; commit();
+    }
+    function changePins(d) {
+      var g = sel && sel.type === 'gate' ? gateById(sel.id) : null;
+      if (!g || g.type === 'NOT' || cfg.pinRule.mode !== 'upto') return;
+      var n = clamp(g.nIn + d, 2, cfg.pinRule.n);
+      if (n === g.nIn) return;
+      g.nIn = n;
+      c.wires = c.wires.filter(function (w) { return w.to.split('.')[0] !== g.id || +w.to.split('.')[1] < n; });
+      clampGate(g); commit();
+    }
+    function undo() { if (hi > 0) { hi--; c = JSON.parse(hist[hi]); sel = null; wiring = null; render(); onChange(clone(c)); } }
+    function redo() { if (hi < hist.length - 1) { hi++; c = JSON.parse(hist[hi]); sel = null; wiring = null; render(); onChange(clone(c)); } }
+    function clearAll() {
+      if (!c.gates.length && !c.wires.length && !c.terms) return;
+      c.gates = []; c.wires = []; delete c.terms; sel = null; wiring = null; commit();
+    }
+
+    /* ---- pointer handling ---- */
+    function capture(e) { try { host.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } }
+
+    function portDown(port, p) {
+      if (wiring) {                                   /* second click: finish the wire (with any routing corners placed so far) */
+        var from = wiring.from, wps = wiring.pts; wiring = null;
+        if (from.k === port.k && from.id === port.id) { render(); return; }
+        if (!connect(from, port, wps)) render();
+        return;
+      }
+      sel = null;
+      wiring = { from: port, pts: [], sx: p.x, sy: p.y, cx: p.x, cy: p.y, moved: false, down: true };
+      render();
+    }
+
+    box.addEventListener('pointerdown', function (e) {
+      if (readOnly || (e.button !== undefined && e.button !== 0)) return;
+      box.focus({ preventScroll: true });
+      var p = pt(e), port = portAt(p, 11);
+      if (port) { e.preventDefault(); capture(e); portDown(port, p); return; }
+      var t = e.target;
+      /* a click on empty canvas (or a gate / wire) while a wire is being routed drops a routing corner there */
+      if (wiring) { e.preventDefault(); placeWaypoint(p); return; }
+      var cEl = t.closest && t.closest('[data-clone]');
+      if (cEl) { e.preventDefault(); cloneTerm(cEl.getAttribute('data-clone')); return; }
+      var wpEl = t.closest && t.closest('[data-wp]');
+      if (wpEl) {                                      /* a wire corner: drag to move, double-click to remove */
+        e.preventDefault(); capture(e);
+        var wid = wpEl.getAttribute('data-wire'), wi = +wpEl.getAttribute('data-wp'), key = wid + ':' + wi, nowT = Date.now();
+        sel = { type: 'wire', id: wid };
+        if (lastTap && lastTap.id === key && nowT - lastTap.t < 380) { lastTap = null; wdrag = null; removeCorner(wid, wi); return; }
+        lastTap = { id: key, t: nowT };
+        wdrag = { wid: wid, idx: wi, moved: false };
+        render();
+        return;
+      }
+      var tEl = t.closest && t.closest('[data-term]');
+      if (tEl) {                                       /* an input terminal: select, drag to move */
+        e.preventDefault(); capture(e);
+        var tid = tEl.getAttribute('data-term'), ti = termById(tid);
+        if (!ti) return;
+        sel = { type: 'term', id: tid };
+        tdrag = { id: tid, dx: p.x - ti.x, dy: p.y - ti.y, moved: false };
+        render();
+        return;
+      }
+      var gEl = t.closest && t.closest('[data-gate]'), wEl = t.closest && t.closest('[data-wire]');
+      if (gEl) {
+        e.preventDefault(); capture(e);
+        var g = gateById(gEl.getAttribute('data-gate'));
+        if (!g) return;
+        sel = { type: 'gate', id: g.id };
+        var now = Date.now(), dbl = lastTap && lastTap.id === g.id && now - lastTap.t < 380;
+        lastTap = { id: g.id, t: now };
+        if (dbl) { drag = null; lastTap = null; flip(); return; }
+        drag = { id: g.id, dx: p.x - g.x, dy: p.y - g.y, moved: false };
+        render();
+        return;
+      }
+      if (wEl) { sel = { type: 'wire', id: wEl.getAttribute('data-wire') }; render(); return; }
+      sel = null; render();
+    });
+
+    host.addEventListener('pointermove', function (e) {
+      if (readOnly) return;
+      if (palette) {
+        if (!palette.moved && Math.abs(e.clientX - palette.x) + Math.abs(e.clientY - palette.y) > 8) palette.moved = true;
+        if (palette.moved) {
+          if (inBox(e)) {
+            var q = pt(e), n = palette.type === 'NOT' ? 1 : defaultPins();
+            ghost = { type: palette.type, nIn: n, x: q.x - 40, y: q.y - Math.max(40, n * 20) / 2, flip: false };
+            clampGate(ghost);
+          } else ghost = null;
+          renderSoon();
+        }
+        return;
+      }
+      if (drag) {
+        var p = pt(e), g = gateById(drag.id);
+        if (!g) return;
+        var nx = g.x, ny = g.y;
+        g.x = p.x - drag.dx; g.y = p.y - drag.dy; clampGate(g);
+        if (g.x !== nx || g.y !== ny) { drag.moved = true; renderSoon(); }
+        return;
+      }
+      if (tdrag) {
+        var tp = pt(e);
+        if (moveTerm(tdrag.id, tp.x - tdrag.dx, tp.y - tdrag.dy)) { tdrag.moved = true; renderSoon(); }
+        return;
+      }
+      if (wdrag) {
+        var wp = pt(e), ww = null;
+        c.wires.forEach(function (x) { if (x.id === wdrag.wid) ww = x; });
+        if (!ww || !ww.pts || !ww.pts[wdrag.idx]) return;
+        var nxp = { x: clamp(snapX(wp.x), 20, L.W - 20), y: clamp(snapY(wp.y), 10, L.H - 10) }, cur0 = ww.pts[wdrag.idx];
+        if (nxp.x !== cur0.x || nxp.y !== cur0.y) { ww.pts[wdrag.idx] = nxp; wdrag.moved = true; renderSoon(); }
+        return;
+      }
+      if (wiring) {
+        var w = pt(e);
+        wiring.cx = w.x; wiring.cy = w.y;
+        if (wiring.down && Math.abs(w.x - wiring.sx) + Math.abs(w.y - wiring.sy) > 8) wiring.moved = true;
+        renderSoon();
+      }
+    });
+
+    function pointerEnd(e) {
+      if (readOnly) return;
+      if (palette) {
+        var pl = palette, gh = ghost; palette = null; ghost = null;
+        if (pl.moved) { if (gh && e.type === 'pointerup') addGate(pl.type, gh.x, gh.y); else render(); }
+        else if (e.type === 'pointerup') addAtFreeSpot(pl.type);
+        return;
+      }
+      if (drag) { var d = drag; drag = null; if (d.moved) commit(); else render(); return; }
+      if (tdrag) { var td = tdrag; tdrag = null; if (td.moved) commit(); else render(); return; }
+      if (wdrag) { var wd = wdrag; wdrag = null; if (wd.moved) commit(); else render(); return; }
+      if (wiring && wiring.down) {
+        wiring.down = false;
+        if (wiring.moved) {                         /* press-drag-release = a straight connection between two ports (no corners) */
+          var from = wiring.from, q = e.type === 'pointerup' ? portAt(pt(e), 14) : null;
+          wiring = null;
+          if (q && !(q.k === from.k && q.id === from.id)) { if (!connect(from, q)) render(); }
+          else render();
+        } else render();                            /* a plain click: the wire stays pending so corners can be added (toolbar button shows) */
+      }
+    }
+    host.addEventListener('pointerup', pointerEnd);
+    host.addEventListener('pointercancel', pointerEnd);
+
+    bar.addEventListener('pointerdown', function (e) {
+      if (readOnly || (e.button !== undefined && e.button !== 0)) return;
+      var b = e.target.closest && e.target.closest('.ce-g');
+      if (!b || b.classList.contains('locked')) return;
+      e.preventDefault(); capture(e);
+      palette = { type: b.getAttribute('data-type'), x: e.clientX, y: e.clientY, moved: false };
+    });
+    bar.addEventListener('click', function (e) {
+      if (readOnly) return;
+      var g = e.target.closest && e.target.closest('.ce-g');
+      if (g) {
+        if (g.classList.contains('locked')) toast(g.getAttribute('data-type') + ' gates are not allowed in this question.');
+        else if (e.detail === 0) addAtFreeSpot(g.getAttribute('data-type'));   /* keyboard activation */
+        return;
+      }
+      var b = e.target.closest && e.target.closest('[data-act]');
+      if (!b || b.disabled) return;
+      var a = b.getAttribute('data-act');
+      if (a === 'flip') flip();
+      else if (a === 'del') deleteSel();
+      else if (a === 'undo') undo();
+      else if (a === 'redo') redo();
+      else if (a === 'clear') clearAll();
+      else if (a === 'pm') changePins(-1);
+      else if (a === 'pp') changePins(1);
+      else if (a === 'wp') backWire();
+      else if (a === 'clonet') { if (sel && sel.type === 'term') cloneTerm(sel.id); }
+      box.focus({ preventScroll: true });
+    });
+
+    box.addEventListener('contextmenu', function (e) {
+      if (readOnly) return;
+      e.preventDefault();
+      if (wiring) { backWire(); return; }               /* while routing: right-click = drop the last corner (then cancel) */
+      var t = e.target, gEl = t.closest && t.closest('[data-gate]'), wEl = t.closest && t.closest('[data-wire]'), tEl = t.closest && t.closest('[data-term]');
+      if (gEl) deleteGate(gEl.getAttribute('data-gate'));
+      else if (wEl) deleteWire(wEl.getAttribute('data-wire'));
+      else if (tEl) deleteTerm(tEl.getAttribute('data-term'));
+    });
+
+    box.addEventListener('keydown', function (e) {
+      if (readOnly) return;
+      var k = e.key, mod = e.ctrlKey || e.metaKey;
+      if (k === 'Escape' && wiring) { e.preventDefault(); backWire(); return; }
+      if (k === 'Delete' || k === 'Backspace') { if (sel) { e.preventDefault(); deleteSel(); } }
+      else if (k === ' ' || e.code === 'Space') { if (sel && sel.type === 'gate') { e.preventDefault(); flip(); } }
+      else if (k === 'Escape') { wiring = null; ghost = null; palette = null; sel = null; render(); }
+      else if (mod && (k === 'z' || k === 'Z')) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+      else if (mod && (k === 'y' || k === 'Y')) { e.preventDefault(); redo(); }
+      else if (sel && sel.type === 'gate' && /^Arrow/.test(k)) {
+        e.preventDefault();
+        var g = gateById(sel.id);
+        if (!g) return;
+        if (k === 'ArrowLeft') g.x -= GRID; else if (k === 'ArrowRight') g.x += GRID;
+        else if (k === 'ArrowUp') g.y -= GRID; else g.y += GRID;
+        clampGate(g); commit();
+      }
+      else if (sel && sel.type === 'term' && /^Arrow/.test(k)) {
+        e.preventDefault();
+        var ti = termById(sel.id);
+        if (!ti) return;
+        var tx = ti.x, ty = ti.y;
+        if (k === 'ArrowLeft') tx -= GRID; else if (k === 'ArrowRight') tx += GRID;
+        else if (k === 'ArrowUp') ty -= GRID; else ty += GRID;
+        if (moveTerm(sel.id, tx, ty)) commit();
+      }
+    });
+
+    /* ---- public API ---- */
+    function setConfig(nc) {
+      cfg = nc; L = layout(cfg);
+      var names = {};
+      terminalNames(cfg).forEach(function (t) { names[t] = 1; });
+      var sig = terminalNames(cfg).join('|');
+      if (sig !== namesSig) {                                  /* the set of inputs changed: start from the default layout again */
+        namesSig = sig;
+        delete c.terms;
+        c.wires = c.wires.filter(function (w) { return isGateId(w.from) || (names[w.from] && w.from === termName(w.from)); });
+      }
+      c.wires = c.wires.filter(function (w) { return isGateId(w.from) || names[termName(w.from)]; });
+      c.gates.forEach(clampGate);
+      sel = null; wiring = null; ghost = null;
+      renderBar();
+      hist = [snapshot()]; hi = 0;
+      render(); onChange(clone(c));
+    }
+    function setCircuit(x) {
+      c = sanitizeCircuit(x); sel = null; wiring = null;
+      c.gates.forEach(clampGate);
+      hist = [snapshot()]; hi = 0;
+      render();
+    }
+    function setReadOnly(b) {
+      readOnly = !!b; host.classList.toggle('ce-ro', readOnly);
+      wiring = null; ghost = null; drag = null; palette = null; sel = null; tdrag = null; wdrag = null;
+      render();
+    }
+
+    renderBar();
+    hist = [snapshot()]; hi = 0;
+    host.classList.toggle('ce-ro', readOnly);
+    render();
+
+    return {
+      getCircuit: function () { return clone(c); },
+      setCircuit: setCircuit,
+      setConfig: setConfig,
+      setReadOnly: setReadOnly,
+      toast: toast,
+      destroy: function () { host.innerHTML = ''; host.classList.remove('ce', 'ce-ro'); }
+    };
+  }
+
+  return {
+    GATE_TYPES: GATE_TYPES, GRID: GRID, Q_TYPES: Q_TYPES, OUTER_OPS: OUTER_OPS, FB_KEYS: FB_KEYS,
+    esc: esc, clone: clone, plural: plural, isGateId: isGateId, termName: termName,
+    parseExpression: parseExpression, evalAst: evalAst, rowsFor: rowsFor, minterms: minterms,
+    normalizeQuestion: normalizeQuestion, questionConfig: questionConfig, terminalNames: terminalNames, terminalInstances: terminalInstances,
+    newCircuit: newCircuit, sanitizeCircuit: sanitizeCircuit, analyze: analyze, checkCircuit: checkCircuit, canFlip: canFlip,
+    checkExpression: checkExpression, checkSteps: checkSteps, formatExpr: formatExpr, exprStats: exprStats, usesLowerCase: usesLowerCase,
+    sanitizeHTML: sanitizeHTML, htmlToText: htmlToText,
+    layout: layout, routeVia: routeVia, buildSVG: buildSVG, renderStatic: renderStatic, iconSVG: iconSVG, createEditor: createEditor
+  };
+})();
+
+
+</script>
+<script>window.QUIZ = {"v":1,"title":"CPCS211 Chapter 2 (Part 1)","scheme":"aqua","subjects":["AND / OR Block Diagrams","NAND-Only Implementations","SOP Minimization","Truth Tables","Algebraic Manipulation and Minterms","Drawing AND/OR Circuits","Drawing NAND Circuits"],"questions":[{"id":"qp9qouzp","type":"expression","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>3.\u003c/b> Reduce the following expression to a \u003cb>SOP expression with two terms and four literals\u003c/b>.\u003c/p>\u003cp>\u003ccode>f = a'b'c + a'bc + ab'c + ab'c'\u003c/code>\u003c/p>","target":"f = a'c + ab'","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"or","twoLevel":true,"canonical":false,"noDup":true,"maxTerms":2,"maxLiterals":4,"showTarget":false,"modelAnswer":"f = a'c + ab'","steps":[],"hints":["\u003cp>Look for pairs of terms that are identical except for one variable that appears complemented in one and uncomplemented in the other; then use XY + XY' = X.\u003c/p>","\u003cp>Group the first two terms and the last two terms: a'b'c + a'bc share a'c, and ab'c + ab'c' share ab'.\u003c/p>"],"explanationHTML":"\u003cp>Group the terms in pairs:\u003c/p>\u003cp>\u003ccode>a'b'c + a'bc = a'c(b' + b) = a'c\u003c/code>\u003c/p>\u003cp>\u003ccode>ab'c + ab'c' = ab'(c + c') = ab'\u003c/code>\u003c/p>\u003cp>So the minimum SOP is \u003cb>f = a'c + ab'\u003c/b> (2 terms, 4 literals).\u003c/p>","feedback":{"function":"Your expression is not equivalent to the original one.","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"Write the answer as a sum (+) of product terms.","twolevel":"Multiply out the brackets so every term is a plain product of literals.","canonical":"","terms":"Keep combining terms: XY + XY' = X removes a variable from a pair of terms.","literals":"There are still too many literals; combine pairs of terms that differ in only one variable.","dup":"","step":""},"solution":null},{"id":"qvn4akol","type":"circuit","subject":"Drawing AND/OR Circuits","weight":1,"promptHTML":"\u003cp>\u003cb>4a.\u003c/b> Assume all variables are available both uncomplemented and complemented.\u003c/p>\u003cp>Show a \u003cb>two-level implementation\u003c/b> of \u003ccode>f = ab'c + ad + bd\u003c/code> using AND and OR gates.\u003c/p>","target":"f = ab'c + ad + bd","gates":["AND","OR"],"pinRule":{"mode":"upto","n":8},"deMorgan":false,"complements":true,"noNotUse":false,"maxDepth":2,"maxGates":null,"evalMode":"truth","outerOp":"any","twoLevel":false,"canonical":false,"noDup":false,"maxTerms":null,"maxLiterals":null,"showTarget":false,"modelAnswer":"","steps":[],"hints":["\u003cp>A two-level AND-OR circuit has one AND gate for every product term, all feeding a single OR gate.\u003c/p>","\u003cp>f has three product terms: ab'c, ad and bd. Use b' directly from the complemented input.\u003c/p>"],"explanationHTML":"\u003cp>Level 1: three AND gates make the product terms \u003ccode>ab'c\u003c/code> (3 inputs), \u003ccode>ad\u003c/code> and \u003ccode>bd\u003c/code>.\u003c/p>\u003cp>Level 2: one 3-input OR gate adds them to give \u003ccode>f = ab'c + ad + bd\u003c/code>.\u003c/p>\u003cp>That is \u003cb>4 gates in 2 levels\u003c/b>.\u003c/p>","feedback":{"function":"Check that each product term (ab'c, ad and bd) has its own AND gate and that all three feed the OR gate.","illegal":"Only AND and OR gates are allowed in this question.","pins":"","notuse":"","depth":"A two-level implementation has the AND gates in the first level and one OR gate in the second level.","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"","twolevel":"","canonical":"","terms":"","literals":"","dup":"","step":""},"solution":{"gates":[{"id":"g1","type":"AND","nIn":3,"x":320,"y":60,"flip":false},{"id":"g2","type":"AND","nIn":2,"x":320,"y":200,"flip":false},{"id":"g3","type":"AND","nIn":2,"x":320,"y":320,"flip":false},{"id":"g4","type":"OR","nIn":3,"x":600,"y":180,"flip":false}],"wires":[{"id":"w5","from":"A","to":"g1.0"},{"id":"w6","from":"B'","to":"g1.1"},{"id":"w7","from":"C","to":"g1.2"},{"id":"w9","from":"D","to":"g2.1"},{"id":"w10","from":"B","to":"g3.0"},{"id":"w12","from":"g1","to":"g4.0"},{"id":"w13","from":"g2","to":"g4.1"},{"id":"w14","from":"g3","to":"g4.2"},{"id":"w17","from":"D#16","to":"g3.1"},{"id":"w19","from":"A#18","to":"g2.0"},{"id":"w20","from":"g4","to":"OUT"}],"seq":21,"terms":[{"id":"A","x":220,"y":50},{"id":"A'","x":80,"y":410},{"id":"B","x":220,"y":330},{"id":"B'","x":220,"y":90},{"id":"C","x":220,"y":130},{"id":"C'","x":80,"y":410},{"id":"D","x":220,"y":250},{"id":"D'","x":80,"y":410},{"id":"D#16","x":220,"y":370},{"id":"A#18","x":220,"y":210}]}},{"id":"qurgcjng","type":"circuit","subject":"Drawing AND/OR Circuits","weight":1,"promptHTML":"\u003cp>\u003cb>4b.\u003c/b> Assume all variables are available both uncomplemented and complemented.\u003c/p>\u003cp>Show an implementation of \u003ccode>f = ab'c + ad + bd\u003c/code> using \u003cb>only two-input AND and OR gates\u003c/b>.\u003c/p>","target":"f = ab'c + ad + bd","gates":["AND","OR"],"pinRule":{"mode":"strict","n":2},"deMorgan":true,"complements":true,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"any","twoLevel":false,"canonical":false,"noDup":false,"maxTerms":null,"maxLiterals":null,"showTarget":false,"modelAnswer":"","steps":[],"hints":["\u003cp>Two-input gates mean the expression must be factored so that no gate needs three inputs. Look for a common factor in ab'c + ad.\u003c/p>","\u003cp>Factor out a: ab'c + ad = a(b'c + d). Then f = a(b'c + d) + bd.\u003c/p>"],"explanationHTML":"\u003cp>Factor the first two terms: \u003ccode>ab'c + ad = a(b'c + d)\u003c/code>, so \u003ccode>f = a(b'c + d) + bd\u003c/code>.\u003c/p>\u003cp>Build \u003ccode>b'c\u003c/code> with an AND gate, OR it with \u003ccode>d\u003c/code>, AND the result with \u003ccode>a\u003c/code>, build \u003ccode>bd\u003c/code> with another AND gate, and OR the two results.\u003c/p>\u003cp>That is \u003cb>5 two-input gates\u003c/b>.\u003c/p>","feedback":{"function":"","illegal":"Only AND and OR gates are allowed in this question.","pins":"Every gate must have exactly two inputs. Factor the expression, for example ab'c + ad = a(b'c + d).","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"","twolevel":"","canonical":"","terms":"","literals":"","dup":"","step":""},"solution":{"gates":[{"id":"g1","type":"AND","nIn":2,"x":220,"y":60,"flip":false},{"id":"g2","type":"AND","nIn":2,"x":600,"y":260,"flip":false},{"id":"g3","type":"OR","nIn":2,"x":400,"y":80,"flip":false},{"id":"g4","type":"AND","nIn":2,"x":600,"y":140,"flip":false},{"id":"g5","type":"OR","nIn":2,"x":800,"y":200,"flip":false}],"wires":[{"id":"w6","from":"B'","to":"g1.0"},{"id":"w7","from":"C","to":"g1.1"},{"id":"w8","from":"g1","to":"g3.0"},{"id":"w10","from":"g3","to":"g4.0"},{"id":"w12","from":"B","to":"g2.0"},{"id":"w14","from":"g4","to":"g5.0"},{"id":"w16","from":"g5","to":"OUT"},{"id":"w18","from":"D#17","to":"g2.1"},{"id":"w19","from":"g2","to":"g5.1"},{"id":"w21","from":"D","to":"g3.1","pts":[{"x":400,"y":130}]},{"id":"w22","from":"A","to":"g4.1"}],"seq":23,"terms":[{"id":"A","x":160,"y":170},{"id":"A'","x":80,"y":410},{"id":"B","x":160,"y":270},{"id":"B'","x":160,"y":50},{"id":"C","x":160,"y":90},{"id":"C'","x":80,"y":410},{"id":"D","x":160,"y":130},{"id":"D'","x":80,"y":410},{"id":"D#17","x":160,"y":310}]}},{"id":"qwzvfq4j","type":"steps","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>5a.\u003c/b> Write f as a \u003cb>sum of minterms in numeric form\u003c/b>, for example \u003ccode>Σm(0, ...)\u003c/code>, for the following truth table.\u003c/p>\u003cpre>x y z | f\n0 0 0 | 1\n0 0 1 | 0\n0 1 0 | 1\n0 1 1 | 1\n1 0 0 | 0\n1 0 1 | 1\n1 1 0 | 0\n1 1 1 | 1\u003c/pre>\u003cp>Choose the right option in each dropdown, then press \u003cb>Check answer\u003c/b>.\u003c/p>","target":"","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"any","twoLevel":false,"canonical":false,"noDup":false,"maxTerms":null,"maxLiterals":null,"showTarget":false,"modelAnswer":"","steps":[{"label":"Which sum of minterms describes f?","options":["Σm(0, 2, 3, 5, 7)","Σm(1, 4, 6)","Σm(0, 2, 3, 4, 7)","Σm(0, 1, 3, 5, 7)","Σm(0, 2, 3, 5, 6)","Σm(1, 3, 4, 6, 8)"],"correct":0,"feedback":"Include exactly the rows where f = 1: xyz = 000, 010, 011, 101 and 111, which are minterms 0, 2, 3, 5 and 7."}],"hints":["\u003cp>List the rows of the truth table where f = 1; each of them is one minterm.\u003c/p>","\u003cp>Convert each of those rows to a number by reading xyz as binary: 000 = 0, 001 = 1, 010 = 2, ... 111 = 7.\u003c/p>"],"explanationHTML":"\u003cp>f = 1 for xyz = 000, 010, 011, 101 and 111, which are rows 0, 2, 3, 5 and 7. So \u003ccode>f(x, y, z) = Σm(0, 2, 3, 5, 7)\u003c/code>.\u003c/p>","feedback":{"function":"","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"","twolevel":"","canonical":"","terms":"","literals":"","dup":"","step":""},"solution":null},{"id":"q268uo4i","type":"expression","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>5b.\u003c/b> Write f as a \u003cb>sum of minterms in algebraic form\u003c/b>, for example \u003ccode>x'yz + ...\u003c/code>, for the following truth table.\u003c/p>\u003cpre>x y z | f\n0 0 0 | 1\n0 0 1 | 0\n0 1 0 | 1\n0 1 1 | 1\n1 0 0 | 0\n1 0 1 | 1\n1 1 0 | 0\n1 1 1 | 1\u003c/pre>","target":"f = x'y'z' + x'yz' + x'yz + xy'z + xyz","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"or","twoLevel":true,"canonical":true,"noDup":true,"maxTerms":5,"maxLiterals":null,"showTarget":false,"modelAnswer":"f = x'y'z' + x'yz' + x'yz + xy'z + xyz","steps":[],"hints":["\u003cp>A minterm is a product that contains every variable (x, y and z). Each row where f = 1 gives one minterm.\u003c/p>","\u003cp>In a row, a 0 becomes a complemented variable and a 1 an uncomplemented one: row 010 gives x'yz'.\u003c/p>"],"explanationHTML":"\u003cp>The rows where f = 1 are 000, 010, 011, 101 and 111:\u003c/p>\u003cp>\u003ccode>f = x'y'z' + x'yz' + x'yz + xy'z + xyz\u003c/code>\u003c/p>","feedback":{"function":"Your expression does not match the truth table. Check which rows have f = 1.","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"Write the answer as a sum (+) of minterms.","twolevel":"Write plain products of literals, with no brackets.","canonical":"Every term must contain all three variables x, y and z (a minterm).","terms":"f = 1 in exactly five rows, so you need exactly five minterms.","literals":"","dup":"","step":""},"solution":null},{"id":"q9j5w35s","type":"expression","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>5c.\u003c/b> Find \u003cb>one minimum SOP expression\u003c/b> (3 terms, 6 literals) for the following truth table.\u003c/p>\u003cpre>x y z | f\n0 0 0 | 1\n0 0 1 | 0\n0 1 0 | 1\n0 1 1 | 1\n1 0 0 | 0\n1 0 1 | 1\n1 1 0 | 0\n1 1 1 | 1\u003c/pre>","target":"f = x'y'z' + x'yz' + x'yz + xy'z + xyz","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"or","twoLevel":true,"canonical":false,"noDup":true,"maxTerms":3,"maxLiterals":6,"showTarget":false,"modelAnswer":"f = x'z' + x'y + xz","steps":[],"hints":["\u003cp>Combine adjacent minterms (minterms that differ in one variable) with XY + XY' = X, or group the 1s on a Karnaugh map.\u003c/p>","\u003cp>m0 and m2 combine into x'z', m5 and m7 combine into xz, and m2 and m3 combine into x'y (m3 and m7 combining into yz also works).\u003c/p>"],"explanationHTML":"\u003cp>Combining adjacent minterms: \u003ccode>m0 + m2 = x'z'\u003c/code>, \u003ccode>m2 + m3 = x'y\u003c/code>, \u003ccode>m5 + m7 = xz\u003c/code>.\u003c/p>\u003cp>\u003ccode>f = x'z' + x'y + xz\u003c/code> (3 terms, 6 literals). Another correct answer is \u003ccode>f = x'z' + xz + yz\u003c/code>.\u003c/p>","feedback":{"function":"Your expression does not match the truth table.","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"Write the answer as a sum (+) of product terms.","twolevel":"Write plain products of literals, with no brackets.","canonical":"","terms":"A minimum SOP needs only 3 terms. Combine adjacent minterms.","literals":"A minimum SOP needs only 6 literals. Combine adjacent minterms to remove variables.","dup":"","step":""},"solution":null},{"id":"q2znufj2","type":"expression","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>5d.\u003c/b> Find a \u003cb>POS expression in product of maxterms form\u003c/b> for the following truth table.\u003c/p>\u003cpre>x y z | f\n0 0 0 | 1\n0 0 1 | 0\n0 1 0 | 1\n0 1 1 | 1\n1 0 0 | 0\n1 0 1 | 1\n1 1 0 | 0\n1 1 1 | 1\u003c/pre>","target":"f = (x + y + z')(x' + y + z)(x' + y' + z)","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"and","twoLevel":true,"canonical":true,"noDup":true,"maxTerms":3,"maxLiterals":null,"showTarget":false,"modelAnswer":"f = (x + y + z')(x' + y + z)(x' + y' + z)","steps":[],"hints":["\u003cp>Maxterms come from the rows where f = 0. Here f = 0 for xyz = 001, 100 and 110, so you need three factors.\u003c/p>","\u003cp>In a maxterm a 0 in the row stays uncomplemented and a 1 becomes complemented: row 001 gives (x + y + z').\u003c/p>"],"explanationHTML":"\u003cp>f = 0 for rows 001, 100 and 110. Each gives one maxterm:\u003c/p>\u003cp>\u003ccode>001 → (x + y + z')\u003c/code>, \u003ccode>100 → (x' + y + z)\u003c/code>, \u003ccode>110 → (x' + y' + z)\u003c/code>\u003c/p>\u003cp>\u003ccode>f = (x + y + z')(x' + y + z)(x' + y' + z)\u003c/code>\u003c/p>","feedback":{"function":"Your expression does not match the truth table. Check which rows have f = 0.","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"Write the answer as a product (AND) of sums.","twolevel":"Every factor must be a plain sum of literals.","canonical":"Every factor must contain all three variables x, y and z (a maxterm).","terms":"f = 0 in exactly three rows, so you need exactly three maxterms.","literals":"","dup":"","step":""},"solution":null},{"id":"q73dlqd4","type":"expression","subject":"Algebraic Manipulation and Minterms","weight":1,"promptHTML":"\u003cp>\u003cb>5e.\u003c/b> Find a \u003cb>minimum POS form\u003c/b> (2 terms, 5 literals) for the following truth table.\u003c/p>\u003cpre>x y z | f\n0 0 0 | 1\n0 0 1 | 0\n0 1 0 | 1\n0 1 1 | 1\n1 0 0 | 0\n1 0 1 | 1\n1 1 0 | 0\n1 1 1 | 1\u003c/pre>","target":"f = (x + y + z')(x' + y + z)(x' + y' + z)","gates":[],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":false,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"and","twoLevel":true,"canonical":false,"noDup":true,"maxTerms":2,"maxLiterals":5,"showTarget":false,"modelAnswer":"f = (x + y + z')(x' + z)","steps":[],"hints":["\u003cp>Minimize the zeros of f: f' = Σm(1, 4, 6), then complement the minimum SOP of f' with De Morgan's theorem.\u003c/p>","\u003cp>m4 and m6 combine into xz', so f' = x'y'z + xz'. Complementing gives the two factors.\u003c/p>"],"explanationHTML":"\u003cp>The zeros of f are rows 1, 4 and 6, so \u003ccode>f' = x'y'z + xz'\u003c/code> (m4 and m6 combine into xz').\u003c/p>\u003cp>Complement with De Morgan's theorem: \u003ccode>f = (x + y + z')(x' + z)\u003c/code> (2 terms, 5 literals).\u003c/p>","feedback":{"function":"Your expression does not match the truth table.","illegal":"","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"Write the answer as a product (AND) of sums.","twolevel":"Every factor must be a plain sum of literals.","canonical":"","terms":"A minimum POS needs only 2 factors.","literals":"A minimum POS needs only 5 literals. Combine adjacent zeros first.","dup":"","step":""},"solution":null},{"id":"q9sgjinu","type":"circuit","subject":"Drawing NAND Circuits","weight":1,"promptHTML":"\u003cp>\u003cb>6a.\u003c/b> Assume all inputs are available both uncomplemented and complemented.\u003c/p>\u003cp>Show an implementation of\u003c/p>\u003cp>\u003ccode>g = wx + wz + w'x' + w'y'z' = (w' + x + z)(w + x' + y')(w + x' + z')\u003c/code>\u003c/p>\u003cp>using \u003cb>NAND gates of any size\u003c/b>.\u003c/p>","target":"g = wx + wz + w'x' + w'y'z'","gates":["NAND"],"pinRule":{"mode":"upto","n":8},"deMorgan":true,"complements":true,"noNotUse":false,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"any","twoLevel":false,"canonical":false,"noDup":false,"maxTerms":null,"maxLiterals":null,"showTarget":false,"modelAnswer":"","steps":[],"hints":["\u003cp>A NAND-NAND network implements a sum of products: first-level NAND gates make the product terms (complemented) and a final NAND combines them.\u003c/p>","\u003cp>g has four product terms: wx, wz, w'x' and w'y'z'. Use one NAND gate for each (complemented inputs are free) and feed all four into one 4-input NAND gate.\u003c/p>"],"explanationHTML":"\u003cp>Use the SOP form \u003ccode>g = wx + wz + w'x' + w'y'z'\u003c/code>.\u003c/p>\u003cp>Level 1: \u003ccode>NAND(w,x)\u003c/code>, \u003ccode>NAND(w,z)\u003c/code>, \u003ccode>NAND(w',x')\u003c/code> and \u003ccode>NAND(w',y',z')\u003c/code> give the complemented product terms.\u003c/p>\u003cp>Level 2: a 4-input NAND of these four outputs gives \u003ccode>g\u003c/code> by De Morgan's theorem.\u003c/p>\u003cp>That is \u003cb>5 gates in 2 levels\u003c/b>.\u003c/p>","feedback":{"function":"Use the SOP form: one NAND gate per product term, then one NAND gate combining all of them.","illegal":"Only NAND gates are allowed in this question.","pins":"","notuse":"","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"","twolevel":"","canonical":"","terms":"","literals":"","dup":"","step":""},"solution":{"gates":[{"id":"g1","type":"NAND","nIn":2,"x":180,"y":60,"flip":false},{"id":"g2","type":"NAND","nIn":2,"x":180,"y":160,"flip":false},{"id":"g3","type":"NAND","nIn":2,"x":180,"y":260,"flip":false},{"id":"g4","type":"NAND","nIn":3,"x":180,"y":340,"flip":false},{"id":"g5","type":"NAND","nIn":4,"x":800,"y":180,"flip":true}],"wires":[{"id":"w6","from":"W","to":"g1.0"},{"id":"w7","from":"X","to":"g1.1"},{"id":"w8","from":"W","to":"g3.0"},{"id":"w9","from":"Z","to":"g3.1"},{"id":"w10","from":"W'","to":"g2.0"},{"id":"w11","from":"X'","to":"g2.1"},{"id":"w12","from":"W'","to":"g4.0"},{"id":"w13","from":"Y'","to":"g4.1"},{"id":"w14","from":"Z'","to":"g4.2"},{"id":"w15","from":"g1","to":"g5.0"},{"id":"w16","from":"g3","to":"g5.1"},{"id":"w17","from":"g2","to":"g5.2"},{"id":"w18","from":"g4","to":"g5.3"},{"id":"w19","from":"g5","to":"OUT"}],"seq":20}},{"id":"q8ltigwx","type":"circuit","subject":"Drawing NAND Circuits","weight":1,"promptHTML":"\u003cp>\u003cb>6c.\u003c/b> Assume all inputs are available both uncomplemented and complemented.\u003c/p>\u003cp>Show an implementation of\u003c/p>\u003cp>\u003ccode>g = wx + wz + w'x' + w'y'z' = (w' + x + z)(w + x' + y')(w + x' + z')\u003c/code>\u003c/p>\u003cp>using \u003cb>two-input NAND gates\u003c/b>, none of which may be used as a NOT gate.\u003c/p>","target":"g = wx + wz + w'x' + w'y'z'","gates":["NAND"],"pinRule":{"mode":"strict","n":2},"deMorgan":true,"complements":true,"noNotUse":true,"maxDepth":null,"maxGates":null,"evalMode":"truth","outerOp":"any","twoLevel":false,"canonical":false,"noDup":false,"maxTerms":null,"maxLiterals":null,"showTarget":false,"modelAnswer":"","steps":[],"hints":["\u003cp>Factor the function so that every gate needs only two inputs: g = w(x + z) + w'(x' + y'z'). Remember NAND(a, b) = a' + b'.\u003c/p>","\u003cp>x + z = NAND(x', z') and y + z = NAND(y', z'). Then x' + y'z' = (x(y + z))' = NAND(x, NAND(y', z')).\u003c/p>"],"explanationHTML":"\u003cp>Factor: \u003ccode>g = w(x + z) + w'(x' + y'z')\u003c/code>.\u003c/p>\u003cp>\u003ccode>x + z = NAND(x', z')\u003c/code>, so \u003ccode>w(x + z)\u003c/code> is the complement of \u003ccode>NAND(NAND(x',z'), w)\u003c/code>.\u003c/p>\u003cp>\u003ccode>y + z = NAND(y', z')\u003c/code> and \u003ccode>x' + y'z' = (x(y + z))' = NAND(x, NAND(y',z'))\u003c/code>, so \u003ccode>w'(x' + y'z')\u003c/code> is the complement of \u003ccode>NAND(NAND(x, NAND(y',z')), w')\u003c/code>.\u003c/p>\u003cp>The final NAND of these two complemented terms gives \u003ccode>g\u003c/code>. That is \u003cb>6 two-input NAND gates\u003c/b>, none used as an inverter.\u003c/p>","feedback":{"function":"","illegal":"Only NAND gates are allowed in this question.","pins":"Every NAND gate must have exactly two inputs. Factor the expression so that no gate needs more.","notuse":"Do not tie the inputs of a NAND together; the complemented inputs are already available.","depth":"","gates":"","incomplete":"","syntax":"","vars":"","literal":"","outer":"","twolevel":"","canonical":"","terms":"","literals":"","dup":"","step":""},"solution":{"gates":[{"id":"g1","type":"NAND","nIn":2,"x":180,"y":100,"flip":true},{"id":"g2","type":"NAND","nIn":2,"x":180,"y":300,"flip":false},{"id":"g3","type":"NAND","nIn":2,"x":380,"y":100,"flip":false},{"id":"g4","type":"NAND","nIn":2,"x":380,"y":300,"flip":true},{"id":"g5","type":"NAND","nIn":2,"x":600,"y":200,"flip":false},{"id":"g6","type":"NAND","nIn":2,"x":800,"y":200,"flip":true}],"wires":[{"id":"w7","from":"Y'","to":"g2.0"},{"id":"w8","from":"Z'","to":"g2.1"},{"id":"w9","from":"g2","to":"g4.0"},{"id":"w10","from":"X","to":"g4.1"},{"id":"w11","from":"g4","to":"g5.0"},{"id":"w12","from":"W'","to":"g5.1"},{"id":"w13","from":"X'","to":"g1.0"},{"id":"w14","from":"Z'","to":"g1.1"},{"id":"w15","from":"g1","to":"g3.0"},{"id":"w16","from":"W","to":"g3.1"},{"id":"w17","from":"g5","to":"g6.0"},{"id":"w18","from":"g3","to":"g6.1"},{"id":"w19","from":"g6","to":"OUT"}],"seq":20}}]};</script>
+<script>
+
+/* ===== Quiz player runtime (reads window.QUIZ, uses Engine) ===== */
+(function () {
+  'use strict';
+  var E = Engine, Q = window.QUIZ || { title: 'Quiz', questions: [], subjects: [] }, esc = E.esc;
+  Q.questions = (Q.questions || []).map(E.normalizeQuestion);
+  var CFG = Q.questions.map(E.questionConfig);
+  var root = document.documentElement;
+  var screen = document.getElementById('screen');
+  var editor = null;
+  /* state.qs   = the MAIN run (drives the primary score; never modified by a drill)
+     state.dq   = the current practice DRILL run (fresh every time a drill starts)
+     state.corrected[qi] = true once a drill solved a question that was missed in the main run
+     state.mode = which of the two runs the question screen is showing ('main' | 'drill'); state.order = its question indices */
+  /* state.strict is ON by default (the switch on the title screen can turn it off); state.marked[qi] = flagged for review (never affects scoring) */
+  var state = { screen: 'title', mode: 'main', strict: true, order: [], idx: 0, qs: {}, dq: {}, corrected: {}, marked: {}, drillNote: null, expand: {} };
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function nl2br(s) { return String(s).replace(/\n/g, '<br>'); }
+  function subjectOf(q) { return q.subject || 'General'; }
+  function curQ() { return state.order[state.idx]; }
+  function S(qi) { return state.mode === 'drill' ? state.dq[qi] : state.qs[qi]; }       /* per-question state of the run on screen */
+  function strictOn() { return state.strict && state.mode === 'main'; }                    /* drills are always practice-style */
+  function freshQ() { return { status: 'open', attempts: [], hints: 0, wrong: false, showSol: false, circuit: null, draft: '', sel: [] }; }
+  function isLowerQ(q) { return E.usesLowerCase(q.target); }
+  /* the typed form of an answer, with prime marks typeset as the textbook prime */
+  function fx(t) { return esc(String(t).replace(/'/g, '\u2032')); }
+  function answerLine(q, cfg, txt) { return /=/.test(txt) ? txt : cfg.outName + ' = ' + txt; }
+  /* step dropdowns: options are shown in a fixed shuffled order (seeded by question id + step), results always refer to the author's order */
+  function seedOf(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function rng(seed) {
+    return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  function optionOrder(q, i) {
+    var n = q.steps[i].options.length, a = [], r = rng(seedOf(q.id + ':' + i)), k, j, t;
+    for (k = 0; k < n; k++) a.push(k);
+    for (k = n - 1; k > 0; k--) { j = Math.floor(r() * (k + 1)); t = a[k]; a[k] = a[j]; a[j] = t; }
+    if (n > 1 && a.every(function (v, x) { return v === x; })) a.push(a.shift());     /* never show the author's order unchanged */
+    return a;
+  }
+  function destroyEditor() { if (editor) { editor.destroy(); editor = null; } }
+  function scrollTop() { try { window.scrollTo(0, 0); } catch (e) { /* ignore */ } }
+
+  /* ---------------------------------------------------------- theme */
+  var SCHEMES = ['aqua', 'blue', 'orange', 'green', 'purple', 'crimson'];
+  var PREF = 'logiccircuitquiz:' + (Q.title || 'quiz');
+  function loadPrefs() { try { return JSON.parse(localStorage.getItem(PREF) || '{}') || {}; } catch (e) { return {}; } }
+  function savePrefs() {
+    try { localStorage.setItem(PREF, JSON.stringify({ theme: root.getAttribute('data-theme'), scheme: root.getAttribute('data-scheme') })); } catch (e) { /* ignore */ }
+  }
+  function syncChrome() {
+    $('#selScheme').value = root.getAttribute('data-scheme');
+    $('#btnTheme').textContent = root.getAttribute('data-theme') === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    $('#pTitle').textContent = Q.title || 'Logic Quiz';
+    document.title = Q.title || 'Logic Quiz';
+  }
+  (function initTheme() {
+    var p = loadPrefs();
+    root.setAttribute('data-theme', p.theme === 'dark' ? 'dark' : 'light');   /* default: light */
+    var sc = SCHEMES.indexOf(p.scheme) >= 0 ? p.scheme : (SCHEMES.indexOf(Q.scheme) >= 0 ? Q.scheme : 'aqua');
+    root.setAttribute('data-scheme', sc);
+    syncChrome();
+    $('#btnTheme').addEventListener('click', function () {
+      root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      syncChrome(); savePrefs();
+    });
+    $('#selScheme').addEventListener('change', function (e) {
+      root.setAttribute('data-scheme', e.target.value); syncChrome(); savePrefs();
+    });
+  })();
+
+  /* ---------------------------------------------------------- modal */
+  function confirmModal(title, msg, okText, cancelText) {
+    return new Promise(function (resolve) {
+      var mr = $('#modalRoot'), prev = document.activeElement;
+      mr.innerHTML = '<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle">' + esc(title) +
+        '</h3><p>' + esc(msg) + '</p><div class="row"><button type="button" class="btn" data-m="no">' + esc(cancelText || 'Cancel') +
+        '</button><button type="button" class="btn primary" data-m="yes">' + esc(okText || 'OK') + '</button></div></div></div>';
+      function close(v) {
+        mr.innerHTML = ''; document.removeEventListener('keydown', onKey);
+        if (prev && prev.focus) prev.focus();
+        resolve(v);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(false); }
+      mr.firstChild.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-m]');
+        if (b) close(b.getAttribute('data-m') === 'yes'); else if (e.target === mr.firstChild) close(false);
+      });
+      document.addEventListener('keydown', onKey);
+      mr.querySelector('[data-m=no]').focus();
+    });
+  }
+
+  /* ---------------------------------------------------------- runs (main quiz + practice drill) */
+  function allIdx() { return Q.questions.map(function (q, i) { return i; }); }
+  function startMain() {
+    state.mode = 'main'; state.qs = {}; state.dq = {}; state.corrected = {}; state.marked = {}; state.drillNote = null; state.expand = {};
+    state.order = allIdx(); state.idx = 0;
+    state.order.forEach(function (i) { state.qs[i] = freshQ(); });
+    state.screen = 'question';
+    render();
+  }
+  function missedList() { return allIdx().filter(function (qi) { return !outcome(qi).pass; }); }
+  /* A drill replays the questions missed in the main run that have not been corrected yet
+     (or all missed ones again once every one of them has been corrected). */
+  function drillList() {
+    var m = missedList(), rest = m.filter(function (qi) { return !state.corrected[qi]; });
+    return rest.length ? rest : m;
+  }
+  function startDrill() {
+    var list = drillList();
+    if (!list.length) return;
+    state.mode = 'drill'; state.dq = {}; state.drillNote = null; state.order = list; state.idx = 0;
+    list.forEach(function (qi) { state.dq[qi] = freshQ(); });
+    state.screen = 'question';
+    render();
+  }
+  function backToResults() { state.mode = 'main'; state.order = allIdx(); state.screen = 'results'; render(); }
+
+  function outcome(qi) {
+    var st = state.qs[qi];
+    if (st.status === 'solved') {
+      if (state.strict && st.wrong) return { pass: false, label: 'Solved after a wrong attempt (strict)', icon: '\u2717', cls: 'bad' };
+      return { pass: true, label: 'Passed', icon: '\u2713', cls: 'ok' };
+    }
+    if (st.status === 'skipped') return { pass: false, label: 'Skipped', icon: '\u23ED', cls: 'skip' };
+    if (st.status === 'revealed') return { pass: false, label: 'Solution viewed', icon: '\u2717', cls: 'bad' };
+    return { pass: false, label: st.attempts.length ? 'Not solved' : 'Not attempted', icon: '\u2717', cls: 'bad' };
+  }
+  function tally() {
+    var totalW = 0, passW = 0, passN = 0, subj = {}, names = [];
+    (Q.subjects || []).forEach(function (s) { names.push(s); });
+    allIdx().forEach(function (qi) {
+      var q = Q.questions[qi], s = subjectOf(q), o = outcome(qi);
+      if (!subj[s]) { subj[s] = { name: s, tot: 0, pass: 0, n: 0, np: 0 }; if (names.indexOf(s) < 0) names.push(s); }
+      subj[s].tot += q.weight; subj[s].n++; totalW += q.weight;
+      if (o.pass) { subj[s].pass += q.weight; subj[s].np++; passW += q.weight; passN++; }
+    });
+    return { totalW: totalW, passW: passW, passN: passN, pct: totalW ? passW / totalW * 100 : 0, total: Q.questions.length, subj: subj, names: names.filter(function (n) { return subj[n]; }) };
+  }
+
+  /* ---------------------------------------------------------- views */
+  function render() {
+    destroyEditor();
+    if (state.screen === 'title') renderTitle();
+    else if (state.screen === 'question') renderQuestion();
+    else renderResults();
+    scrollTop();
+  }
+
+  function renderTitle() {
+    var n = Q.questions.length, subs = (Q.subjects || []).filter(Boolean), kinds = {};
+    Q.questions.forEach(function (q) { kinds[q.type] = true; });
+    var what = [];
+    if (kinds.circuit) what.push('design logic circuits on a schematic canvas');
+    if (kinds.expression) what.push('type Boolean expressions');
+    if (kinds.steps) what.push('work through a derivation one dropdown at a time');
+    var lead = what.length ? 'In this quiz you ' + what.join(', ').replace(/, ([^,]*)$/, what.length > 1 ? ' and $1' : ', $1') + '. Every answer is checked automatically.' : '';
+    var how = '';
+    if (n) {
+      how += '<h3>Choosing and marking questions</h3><ul>' +
+        '<li>Every question is a numbered <b>box</b> above the question. <b>Click any box</b> to jump to that question, in any order; your work on a question is kept while you look at another.</li>' +
+        '<li>Boxes start <b>white</b>. <b>Mark for review</b> turns a box <b>yellow</b> (and adds a small flag) so you can find it again; it never changes your score.</li>' +
+        '<li>In <b>strict mode</b> a box turns <b>green</b> when its question is correct and <b>red</b> as soon as a wrong answer is checked, or the question is skipped or its solution viewed.</li></ul>';
+    }
+    if (kinds.circuit) {
+      how += '<h3>How the circuit canvas works</h3><ul>' +
+        '<li><b>Place</b> gates by dragging them from the toolbar onto the grid (they snap to it), or click a gate button to drop it in.</li>' +
+        '<li><b>Wire</b> by clicking an output port (or an input terminal such as <b>A</b>), then a gate input pin — or drag between the two. One signal can feed many pins.</li>' +
+        '<li><b>Route</b> a wire around things: after you start it, click empty grid points to add corners. <kbd>Esc</kbd> or right-click removes the last corner (then cancels the wire). Drag a corner to move it; double-click it to remove it.</li>' +
+        '<li><b>Move or copy inputs</b>: drag an input box anywhere. The <b>+</b> badge (or <i>Copy input</i>) adds another copy of that input to place right next to the gate that needs it — every copy is the same variable. Right-click or Delete removes a copy.</li>' +
+        '<li><b>Flip</b> a selected gate to its De Morgan symbol with <kbd>Space</kbd> or a double-click (when the question allows it). It is the same gate, drawn differently.</li>' +
+        '<li><b>Remove</b> a selected gate or wire with <kbd>Delete</kbd> or right-click. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes.</li>' +
+        '<li>Your circuit is tested against <b>every</b> row of the truth table, so any correct implementation that obeys the rules is accepted.</li></ul>';
+    }
+    if (kinds.expression) {
+      how += '<h3>Typing an expression</h3><ul>' +
+        '<li>Write <b>AND</b> by putting letters side by side (<code>AB</code>) or with <code>*</code>, <b>OR</b> with <code>+</code>, and a <b>complement</b> with a prime: <code>A′</code> (type <code>\'</code>) or <code>~A</code>. Brackets work as usual.</li>' +
+        '<li>The preview under the box shows how your answer was read, with its number of terms and literals. The symbol buttons insert letters and marks for you.</li>' +
+        '<li>An answer that cannot be read (a typo, or a letter the question does not use) is explained on the spot and does <b>not</b> count as an attempt.</li>' +
+        '<li>Your expression is compared on <b>every</b> input combination, and the rules listed under the question (such as a sum of products, or a limit on terms or literals) are checked too.</li></ul>';
+    }
+    if (kinds.steps) {
+      how += '<h3>Dropdown steps</h3><ul><li>Pick one option in every dropdown, then press <b>Check answer</b>. You will see which steps are right; fix the others and check again.</li></ul>';
+    }
+    screen.innerHTML =
+      '<section class="card hero"><h1>' + esc(Q.title || 'Logic Quiz') + '</h1>' +
+      (lead ? '<p class="muted">' + esc(lead) + '</p>' : '') +
+      '<div class="meta"><span class="chip">' + E.plural(n, 'question') + '</span>' +
+      subs.map(function (s) { return '<span class="chip plain">' + esc(s) + '</span>'; }).join('') + '</div>' +
+      '<div class="strict-box"><label class="switch"><input type="checkbox" id="chkStrict"' + (state.strict ? ' checked' : '') + '> Strict mode <span class="chip plain">default</span></label>' +
+      '<p class="muted small" style="margin:.5rem 0 0"><b>On (strict):</b> the first wrong check turns the question red, reveals a <i>Show solution</i> button and counts the question as missed, even if you find the right answer later. Its box in the question list turns red (or green when it is right). Every wrong attempt and its explanation stays on screen for review.<br>' +
+      '<b>Off (practice):</b> wrong attempts show feedback and you can retry freely; a question passes once solved.</p></div>' +
+      (n ? '<button type="button" class="btn primary big" data-act="start">Start quiz →</button>' : '<p class="muted">This quiz has no questions.</p>') +
+      '</section>' + (how ? '<section class="card howto">' + how + '</section>' : '');
+  }
+
+  function ruleChips(q, cfg) {
+    var c = [];
+    if (q.type === 'steps') {
+      c.push('<span class="chip">' + E.plural(q.steps.length, 'step') + '</span>');
+      c.push('<span class="chip plain">Pick one option per step</span>');
+      return c.join('');
+    }
+    if (q.type === 'expression') {
+      var lower = isLowerQ(q), vs = cfg.vars.map(function (v) { return lower ? v.toLowerCase() : v; });
+      var op = q.outerOp, unit = op === 'and' ? 'factor' : 'term';
+      c.push('<span class="chip">Variables: ' + esc(vs.join(', ')) + '</span>');
+      c.push('<span class="chip">' + (q.evalMode === 'literal' ? 'Must match the required form (order does not matter)' : 'Any equivalent expression is accepted') + '</span>');
+      if (op === 'or') c.push('<span class="chip">' + (q.twoLevel ? 'Sum of products (SOP)' : 'Top-level OR') + '</span>');
+      else if (op === 'and') c.push('<span class="chip">' + (q.twoLevel ? 'Product of sums (POS)' : 'Top-level AND') + '</span>');
+      else if (op === 'xor') c.push('<span class="chip">Top-level XOR</span>');
+      if (q.canonical) c.push('<span class="chip">Every ' + unit + ' has all ' + vs.length + ' variables</span>');
+      if (q.noDup) c.push('<span class="chip">No duplicate ' + unit + 's</span>');
+      if (q.maxTerms) c.push('<span class="chip">At most ' + E.plural(q.maxTerms, unit) + '</span>');
+      if (q.maxLiterals) c.push('<span class="chip">At most ' + E.plural(q.maxLiterals, 'literal') + '</span>');
+      return c.join('');
+    }
+    c.push('<span class="chip">Gates: ' + esc(q.gates.join(', ') || 'none') + '</span>');
+    var r = q.pinRule;
+    c.push('<span class="chip">' + (r.mode === 'strict' ? 'Exactly ' + r.n + '-input gates' : 'Up to ' + r.n + ' inputs per gate') + '</span>');
+    c.push('<span class="chip">Inputs: ' + esc(E.terminalNames(cfg).join(', ')) + (q.complements ? '' : ' (no complements)') + '</span>');
+    if (q.noNotUse) c.push('<span class="chip">No gate used as a NOT</span>');
+    if (q.maxDepth) c.push('<span class="chip">Max ' + E.plural(q.maxDepth, 'level') + '</span>');
+    if (q.maxGates) c.push('<span class="chip">Max ' + E.plural(q.maxGates, 'gate') + '</span>');
+    c.push('<span class="chip plain">' + (q.deMorgan ? 'De Morgan symbols allowed' : 'Standard symbols only') + '</span>');
+    return c.join('');
+  }
+
+  /* ---- answer areas for the non-circuit question types ---- */
+  function exprAnswerHTML(q, cfg, st) {
+    var lower = isLowerQ(q), vs = cfg.vars.map(function (v) { return lower ? v.toLowerCase() : v; });
+    var ph = vs.length > 2 ? vs[0] + ' + ' + vs[1] + "'" + vs[2] : (vs[0] || 'A') + " + " + (vs[1] || 'B') + "'";
+    var keys = vs.map(function (v) { return '<button type="button" class="key" data-key="' + esc(v) + '" aria-label="Insert ' + esc(v) + '">' + esc(v) + '</button>'; }).join('') +
+      '<button type="button" class="key op" data-key="\'" aria-label="Insert complement (prime)" title="Complement (prime)">′</button>' +
+      '<button type="button" class="key op" data-key="+" aria-label="Insert OR (plus)" title="OR">+</button>' +
+      '<button type="button" class="key op" data-key="(" aria-label="Insert opening bracket">(</button>' +
+      '<button type="button" class="key op" data-key=")" aria-label="Insert closing bracket">)</button>' +
+      '<button type="button" class="key wide" data-key="\\b" aria-label="Delete the character before the cursor" title="Backspace">⌫</button>' +
+      '<button type="button" class="key wide" data-key="\\c" aria-label="Clear the answer">Clear</button>';
+    return '<div class="answer expr" id="qAnswer"><label class="alabel" for="exprIn">Your answer</label>' +
+      '<div class="exprline"><span class="exlhs" aria-hidden="true">' + esc(cfg.outName) + ' =</span>' +
+      '<input id="exprIn" class="input exprin" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" enterkeyhint="done" ' +
+      'aria-label="Your answer for ' + esc(cfg.outName) + '" aria-describedby="exprPrev" placeholder="' + esc(ph) + '" value="' + esc(st.draft || '') + '"></div>' +
+      '<div class="keys" role="group" aria-label="Symbols">' + keys + '</div>' +
+      '<div class="exprprev" id="exprPrev" aria-live="polite"></div><div class="exmsg" id="qMsg" role="alert" hidden></div></div>';
+  }
+  function stepsAnswerHTML(q, st) {
+    var h = '<div class="answer stepsq" id="qAnswer">';
+    q.steps.forEach(function (stp, i) {
+      h += '<div class="stepq" data-step="' + i + '"><label class="steplbl" for="sel' + i + '"><span class="stepn">Step ' + (i + 1) + '</span> ' + esc(stp.label) + '</label>' +
+        '<div class="selrow"><select id="sel' + i + '" class="input stepsel" data-step="' + i + '"><option value="">— choose an option —</option>' +
+        optionOrder(q, i).map(function (k) { return '<option value="' + k + '"' + (st.sel[i] === k ? ' selected' : '') + '>' + esc(stp.options[k]) + '</option>'; }).join('') +
+        '</select><span class="smark" aria-hidden="true"></span></div></div>';
+    });
+    return h + '<div class="exmsg" id="qMsg" role="alert" hidden></div></div>';
+  }
+  function flash(msg, kind) {
+    var m = $('#qMsg');
+    if (!m) return;
+    if (!msg) { m.hidden = true; m.innerHTML = ''; return; }
+    m.className = 'exmsg ' + (kind || 'bad'); m.hidden = false; m.innerHTML = msg;
+  }
+  /* live preview under the expression box: how the answer was read, with term / literal counts; never says right or wrong */
+  function exprPreview() {
+    var qi = curQ(), q = Q.questions[qi], cfg = CFG[qi], st = S(qi), box = $('#exprPrev'), inp = $('#exprIn');
+    if (!box || !inp) return;
+    var txt = inp.value;
+    if (!txt.trim()) { box.className = 'exprprev'; box.innerHTML = '<span class="muted">Preview: your answer appears here as you type.</span>'; return; }
+    var p = E.parseExpression(txt);
+    if (!p.ok) { box.className = 'exprprev warn'; box.innerHTML = '<b>Cannot be read yet:</b> ' + esc(p.error); return; }
+    var lower = isLowerQ(q), unknown = p.vars.filter(function (v) { return cfg.vars.indexOf(v) < 0; });
+    var shown = E.formatExpr(p.ast, lower);
+    if (unknown.length) {
+      box.className = 'exprprev warn';
+      box.innerHTML = '<b>Unknown variable' + (unknown.length > 1 ? 's' : '') + ':</b> ' + esc(unknown.map(function (v) { return lower ? v.toLowerCase() : v; }).join(', ')) +
+        ' — this question uses ' + esc(cfg.vars.map(function (v) { return lower ? v.toLowerCase() : v; }).join(', ')) + '.';
+      return;
+    }
+    var stt = E.exprStats(p.ast, q), unit = q.outerOp === 'and' ? 'factor' : 'term';
+    box.className = 'exprprev ok';
+    box.innerHTML = '<span class="muted">Read as</span> <code class="fx">' + esc(cfg.outName) + ' = ' + fx(shown) + '</code> <span class="muted small">· ' + E.plural(stt.terms, unit) + ', ' + E.plural(stt.literals, 'literal') + '</span>';
+  }
+  function onExprInput() {
+    var st = S(curQ()), inp = $('#exprIn');
+    if (!inp) return;
+    st.draft = inp.value; flash(''); exprPreview();
+  }
+  function insertKey(k) {
+    var inp = $('#exprIn');
+    if (!inp || inp.readOnly) return;
+    var s0 = inp.selectionStart, e0 = inp.selectionEnd, v = inp.value;
+    if (s0 == null) { s0 = e0 = v.length; }
+    if (k === '\\c') { inp.value = ''; s0 = e0 = 0; }
+    else if (k === '\\b') {
+      if (s0 === e0 && s0 > 0) s0--;
+      inp.value = v.slice(0, s0) + v.slice(e0); e0 = s0;
+    } else { inp.value = v.slice(0, s0) + k + v.slice(e0); s0 = e0 = s0 + k.length; }
+    inp.focus();
+    try { inp.setSelectionRange(s0, e0); } catch (err) { /* ignore */ }
+    onExprInput();
+  }
+  /* locks / unlocks the answer widgets and shows the per-step marks of the last check */
+  function syncAnswer() {
+    var qi = curQ(), q = Q.questions[qi], st = S(qi), done = st.status !== 'open', box = $('#qAnswer');
+    if (!box) return;
+    box.classList.toggle('ok', st.status === 'solved');
+    box.classList.toggle('done', done);
+    if (q.type === 'expression') {
+      var inp = $('#exprIn');
+      if (inp) { inp.readOnly = done; inp.setAttribute('aria-readonly', done ? 'true' : 'false'); }
+      Array.prototype.forEach.call(box.querySelectorAll('.key'), function (b) { b.disabled = done; });
+    } else if (q.type === 'steps') {
+      var last = st.attempts.length ? st.attempts[st.attempts.length - 1] : null;
+      Array.prototype.forEach.call(box.querySelectorAll('.stepq'), function (row) {
+        var i = +row.getAttribute('data-step'), sel = row.querySelector('select'), mk = row.querySelector('.smark');
+        sel.disabled = done;
+        var r = last && last.result.steps[i], same = r && r.pick === st.sel[i] && st.sel[i] != null;
+        row.classList.toggle('ok', !!(same && r.ok));
+        row.classList.toggle('bad', !!(same && r.ok === false));
+        mk.textContent = same ? (r.ok ? '✓ right' : '✗ not right') : '';
+      });
+    }
+  }
+
+  function renderQuestion() {
+    var qi = curQ(), q = Q.questions[qi], cfg = CFG[qi], st = S(qi), drill = state.mode === 'drill', circ = q.type === 'circuit';
+    var given = '';
+    if (circ) given = '<div class="qtarget"><span class="lbl">Target function</span><code>' + esc(q.target) + '</code></div>';
+    else if (q.type === 'expression' && q.showTarget) given = '<div class="qtarget"><span class="lbl">Given</span><code class="fx">' + fx(q.target) + '</code></div>';
+    screen.innerHTML =
+      (drill ? '<div class="drillbar"><button type="button" class="btn sm" data-act="results">← Go back to quiz results</button>' +
+        '<span class="chip aqua">🎯 Practice drill · ' + E.plural(state.order.length, 'question') + '</span>' +
+        '<span class="muted small">Strict marking is off here, and your main score will not change.</span></div>' : '') +
+      '<div class="qpick"><nav class="pills" id="qPills" aria-label="Choose a question"></nav><div class="legend" id="qLegend"></div></div>' +
+      '<article class="card qcard" id="qCard">' +
+      '<div class="qhead"><span class="qnum">Question ' + (qi + 1) + (drill ? '' : ' of ' + state.order.length) + '</span>' +
+      (drill ? '<span class="chip aqua">🎯 Practice ' + (state.idx + 1) + ' of ' + state.order.length + '</span>' : '') +
+      '<span class="chip">' + esc(subjectOf(q)) + '</span>' +
+      (q.weight !== 1 ? '<span class="chip plain">weight ×' + q.weight + '</span>' : '') +
+      (strictOn() ? '<span class="chip plain">Strict mode</span>' : '') +
+      '<span id="qBadge"></span>' +
+      '<button type="button" class="btn sm mark-btn" id="qMark" data-act="mark" aria-pressed="false"></button></div>' +
+      '<div class="qprompt rich">' + E.sanitizeHTML(q.promptHTML) + '</div>' + given +
+      '<div class="chips">' + ruleChips(q, cfg) + '</div>' +
+      '<div id="qHints" class="qhints"></div>' +
+      (circ ? '<div id="qEditor"></div>' : q.type === 'expression' ? exprAnswerHTML(q, cfg, st) : stepsAnswerHTML(q, st)) +
+      '<div id="qActions" class="qactions"></div>' +
+      '<div id="qFeedback"></div>' +
+      '<div id="qNav" class="qnav"></div>' +
+      '</article>';
+    if (circ) {
+      editor = E.createEditor($('#qEditor'), {
+        config: cfg, circuit: st.circuit, readOnly: st.status !== 'open',
+        onChange: function (c) { st.circuit = c; }
+      });
+    } else if (q.type === 'expression') exprPreview();
+    refreshDynamic();
+  }
+
+  /* Colour of a question box ('' = white). Marked-for-review is a separate flag (yellow) that a result colour overrides.
+     Strict mode turns a box red at the first wrong check; practice mode only shows final outcomes (solved / skipped / solution viewed). */
+  function pillClass(st) {
+    if (st.status === 'solved') return (strictOn() && st.wrong) ? 'bad' : 'ok';
+    if (st.status === 'skipped' || st.status === 'revealed') return 'bad';
+    return (strictOn() && st.wrong) ? 'bad' : '';
+  }
+  function flagSVG(filled, px) {
+    return '<svg viewBox="0 0 16 16" width="' + px + '" height="' + px + '" aria-hidden="true" focusable="false"><path d="M3.5 14.5V1.8M3.5 2.3h9l-2.2 3.1 2.2 3.1h-9" fill="' + (filled ? 'currentColor' : 'none') +
+      '" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function pillsHTML() {
+    return state.order.map(function (k, i) {
+      var c = pillClass(S(k)), mk = !!state.marked[k], cur = i === state.idx;
+      var label = 'Question ' + (k + 1) + (mk ? ', marked for review' : '') + (c === 'ok' ? ', correct' : c === 'bad' ? ', incorrect' : '') + (cur ? ', current question' : '');
+      return '<button type="button" class="pill' + (c ? ' ' + c : '') + (mk ? ' marked' : '') + (cur ? ' cur' : '') + '" data-go="' + i + '" title="' + label + '" aria-label="' + label + '"' + (cur ? ' aria-current="true"' : '') + '>' + (k + 1) +
+        (mk ? '<span class="pf">' + flagSVG(true, 11) + '</span>' : '') + (c ? '<span class="pr" aria-hidden="true">' + (c === 'ok' ? '✓' : '✗') + '</span>' : '') + '</button>';
+    }).join('');
+  }
+  function legendHTML() {
+    var strict = strictOn();
+    return '<span><i></i>Not answered</span><span><i class="m"></i>Marked for review</span>' +
+      '<span><i class="ok"></i>' + (strict ? 'Correct' : 'Solved') + '</span><span><i class="bad"></i>' + (strict ? 'Wrong, skipped or solution viewed' : 'Skipped or solution viewed') + '</span>';
+  }
+  function hintsHTML(q, st) {
+    if (!q.hints.length) return '';
+    var h = '';
+    for (var i = 0; i < st.hints; i++) {
+      h += '<div class="hint"><div class="hint-h">Hint ' + (i + 1) + ':</div><div class="rich">' + E.sanitizeHTML(q.hints[i]) + '</div></div>';
+    }
+    if (st.hints < q.hints.length && st.status === 'open') {
+      h += '<button type="button" class="btn btn-hint" data-act="hint">\uD83D\uDCA1 ' + (st.hints ? 'Next Hint' : 'Hint') + '</button>';
+    }
+    return h;
+  }
+  function actionsHTML(st, q) {
+    var h = '';
+    if (st.status === 'open') {
+      h += '<button type="button" class="btn primary" data-act="check">\u2714 ' + (q.type === 'circuit' ? 'Check circuit' : 'Check answer') + '</button>';
+      if (strictOn() && st.wrong) h += '<button type="button" class="btn" data-act="solution">\uD83D\uDC41 Show solution</button>';
+      h += '<button type="button" class="btn ghost danger" data-act="skip">Skip question</button>';
+    } else if (st.status === 'solved') {
+      var missed = strictOn() && st.wrong;
+      h += '<div class="banner ok">\u2713 ' + (q.type === 'circuit' ? 'Correct circuit found!' : 'Correct answer!') +
+        (missed ? '<small>Strict mode: this question is still counted as missed because of an earlier wrong attempt (shown below).</small>' : '') +
+        (state.mode === 'drill' ? '<small>\uD83C\uDFAF Corrected! It will be marked as solved in practice on your results page (your score stays the same).</small>' : '') + '</div>';
+    } else {
+      h += '<div class="banner bad">' + (st.status === 'skipped' ? 'Question skipped' : 'Solution viewed') + (state.mode === 'drill' ? ' \u2014 not corrected this time.' : ' \u2014 counted as incorrect.') + '</div>';
+      if (st.status === 'skipped' && !st.showSol) h += '<button type="button" class="btn" data-act="solution">\uD83D\uDC41 Show solution</button>';
+    }
+    return h;
+  }
+  function issuesHTML(r) {
+    if (!r.issues.length) return '';
+    var h = '<ul class="issues">';
+    r.issues.forEach(function (is) {
+      h += '<li>' + esc(is.text) + (is.extra ? '<div class="extra">' + nl2br(esc(is.extra)) + '</div>' : '') + '</li>';
+    });
+    return h + '</ul>';
+  }
+  function stepsListHTML(q, picks, res) {
+    var h = '<ol class="steps-att">';
+    q.steps.forEach(function (stp, i) {
+      var r = res ? res.steps[i] : null, pick = picks ? picks[i] : null, has = typeof pick === 'number' && stp.options[pick] != null;
+      h += '<li class="' + (r ? (r.ok ? 'ok' : (has ? 'bad' : 'skip')) : '') + '"><span class="muted">' + esc(stp.label) + '</span><br>' +
+        (has ? '<b>' + (r ? (r.ok ? '✓ ' : '✗ ') : '') + esc(stp.options[pick]) + '</b>' : '<i class="muted">no answer</i>') + '</li>';
+    });
+    return h + '</ol>';
+  }
+  function attemptsHTML(qi) {
+    var st = S(qi), cfg = CFG[qi], q = Q.questions[qi];
+    if (!st.attempts.length) return '';
+    var h = '<section class="attempts"><h3>Your attempts</h3>';
+    for (var i = st.attempts.length - 1; i >= 0; i--) {
+      var a = st.attempts[i], r = a.result, tail, body;
+      if (q.type === 'expression') {
+        tail = E.plural(r.terms, q.outerOp === 'and' ? 'factor' : 'term') + ', ' + E.plural(r.literals, 'literal');
+        body = '<div class="ans-line"><span class="lbl">Your answer</span><code class="fx">' + fx(answerLine(q, cfg, a.answer)) + '</code></div>';
+      } else if (q.type === 'steps') {
+        tail = r.right + ' of ' + r.total + ' steps right';
+        body = stepsListHTML(q, a.answer, r);
+      } else {
+        tail = E.plural(r.gates, 'gate') + ', ' + E.plural(r.depth, 'level');
+        body = E.renderStatic(a.circuit, cfg);
+      }
+      h += '<details class="attempt ' + (a.pass ? 'ok' : 'bad') + '" open><summary><span class="att-badge">' + (a.pass ? '✓ Correct' : '✗ Not correct') +
+        '</span>Attempt ' + a.n + ' <span class="muted small">· ' + esc(tail) + '</span></summary><div class="att-body">' +
+        body + '<p class="att-head">' + esc(r.headline) + '</p>' + (q.type === 'steps' ? stepFeedbackHTML(q, r) : issuesHTML(r)) + '</div></details>';
+    }
+    return h + '</section>';
+  }
+  /* per-step feedback: only for steps that were answered wrongly (the author's note for the step, if any) */
+  function stepFeedbackHTML(q, r) {
+    var items = r.steps.map(function (x, i) { return x.ok === false ? '<li>Step ' + (i + 1) + ': ' + esc(q.steps[i].feedback || q.feedback.step || 'That choice is not right.') + '</li>' : (x.ok === null ? '<li>Step ' + (i + 1) + ' has no answer yet.</li>' : ''); }).join('');
+    return items ? '<ul class="issues">' + items + '</ul>' : '';
+  }
+  function modelAnswerText(q) { return q.modelAnswer || (q.evalMode === 'literal' ? q.target : ''); }
+  function solutionHTML(qi) {
+    var st = S(qi), q = Q.questions[qi], cfg = CFG[qi];
+    if (!st.showSol && st.status !== 'solved') return '';
+    var h = '<section class="solution"><h3>' + (st.showSol ? 'Solution' : 'Explanation') + '</h3>';
+    h += q.explanationHTML ? '<div class="rich">' + E.sanitizeHTML(q.explanationHTML) + '</div>' : '<p class="muted">The author did not add an explanation for this question.</p>';
+    if (q.type === 'expression') {
+      var ma = modelAnswerText(q);
+      if (ma) {
+        var line = '<p><code class="fx big">' + fx(answerLine(q, cfg, ma)) + '</code></p>';
+        h += st.showSol ? '<h4 style="margin-top:1rem">Model answer</h4>' + line : '<details><summary>Show the author’s model answer</summary>' + line + '</details>';
+      } else if (st.showSol) h += '<p class="muted small">No model answer was provided. Any expression equal to <code class="fx">' + fx(q.target) + '</code> that follows the listed rules is accepted.</p>';
+    } else if (q.type === 'steps') {
+      var list = '<ol class="steps-att">' + q.steps.map(function (stp) { return '<li class="ok"><span class="muted">' + esc(stp.label) + '</span><br><b>✓ ' + esc(stp.options[stp.correct]) + '</b></li>'; }).join('') + '</ol>';
+      h += st.showSol ? '<h4 style="margin-top:1rem">Correct choices</h4>' + list : '<details><summary>Show the correct choices</summary>' + list + '</details>';
+    } else if (q.solution && q.solution.gates.length) {
+      var circ = E.renderStatic(q.solution, cfg);
+      h += st.showSol ? '<h4 style="margin-top:1rem">Correct circuit</h4>' + circ
+        : '<details><summary>Show the author’s reference circuit</summary>' + circ + '</details>';
+    } else if (st.showSol) h += '<p class="muted small">No reference circuit was provided for this question.</p>';
+    return h + '</section>';
+  }
+  function navHTML(st) {
+    var last = state.idx === state.order.length - 1, decided = st.status !== 'open';
+    return '<button type="button" class="btn" data-act="prev"' + (state.idx === 0 ? ' disabled' : '') + '>\u2190 Previous</button>' +
+      (last ? '<button type="button" class="btn primary" data-act="finish">' + (state.mode === 'drill' ? 'Finish drill &amp; see results' : 'Finish &amp; see results') + '</button>'
+        : '<button type="button" class="btn' + (decided ? ' primary' : '') + '" data-act="next">Next \u2192</button>');
+  }
+
+  function refreshDynamic() {
+    var qi = curQ(), q = Q.questions[qi], st = S(qi);
+    $('#qPills').innerHTML = pillsHTML();
+    $('#qLegend').innerHTML = legendHTML();
+    var mk = !!state.marked[qi], mb = $('#qMark');
+    mb.setAttribute('aria-pressed', mk ? 'true' : 'false');
+    mb.innerHTML = flagSVG(mk, 14) + (mk ? 'Marked for review' : 'Mark for review');
+    $('#qHints').innerHTML = hintsHTML(q, st);
+    $('#qActions').innerHTML = actionsHTML(st, q);
+    $('#qFeedback').innerHTML = attemptsHTML(qi) + solutionHTML(qi);
+    $('#qNav').innerHTML = navHTML(st);
+    var miss = strictOn() && st.wrong;
+    $('#qCard').classList.toggle('bad', miss);
+    $('#qBadge').innerHTML = miss ? '<span class="chip bad">\u2717 Marked incorrect</span>' : '';
+    syncAnswer();
+  }
+
+  /* ---------------------------------------------------------- actions */
+  function scrollToFeedback() {
+    var fb = $('#qFeedback');
+    if (fb && fb.scrollIntoView) fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function doCheck() {
+    var qi = curQ(), q = Q.questions[qi], st = S(qi), r, att;
+    if (st.status !== 'open') return;
+    if (q.type === 'expression') {
+      var inp = $('#exprIn'), txt = String(inp ? inp.value : st.draft || '').trim();
+      if (!txt) { flash('Type your answer in the box first, then press Check answer.'); if (inp) inp.focus(); return; }
+      st.draft = txt;
+      r = E.checkExpression(txt, q);
+      var unreadable = r.issues.filter(function (is) { return is.code === 'syntax' || is.code === 'vars'; });
+      if (unreadable.length) {
+        /* a typo or an unknown letter is explained on the spot; it is not a wrong answer and does not count as an attempt */
+        flash('<b>' + esc(r.headline) + '</b> ' + unreadable.map(function (is) { return esc(is.text) + (is.extra ? ' <i>' + esc(is.extra) + '</i>' : ''); }).join(' ') +
+          ' <span class="muted">This did not count as an attempt.</span>');
+        if (inp) inp.focus();
+        return;
+      }
+      att = { n: st.attempts.length + 1, pass: r.pass, answer: txt, result: r };
+    } else if (q.type === 'steps') {
+      if (!q.steps.some(function (x, i) { return typeof st.sel[i] === 'number'; })) { flash('Choose an option in at least one step first, then press Check answer.'); return; }
+      r = E.checkSteps(st.sel, q);
+      att = { n: st.attempts.length + 1, pass: r.pass, answer: st.sel.slice(0, q.steps.length), result: r };
+    } else {
+      var circ = editor.getCircuit();
+      if (!circ.wires.length) { editor.toast('Build a circuit first — place gates and wire them up, then press Check.'); return; }
+      r = E.checkCircuit(circ, q);
+      st.circuit = circ;
+      att = { n: st.attempts.length + 1, pass: r.pass, circuit: circ, result: r };
+    }
+    st.attempts.push(att);
+    if (r.pass) {
+      st.status = 'solved';
+      if (editor) editor.setReadOnly(true);
+      if (state.mode === 'drill') state.corrected[qi] = true;
+    } else if (strictOn()) st.wrong = true;
+    flash('');
+    refreshDynamic();
+    scrollToFeedback();
+  }
+  function doSkip() {
+    var st = S(curQ());
+    if (st.status !== 'open') return;
+    confirmModal('Are you sure?', state.mode === 'drill' ? 'Skipping leaves this question uncorrected for now. You will then be able to view the solution.' : 'Skipping counts this question as incorrect. You will then be able to view the solution.', 'Yes, skip', 'Keep trying').then(function (ok) {
+      if (!ok) return;
+      st.status = 'skipped'; if (editor) editor.setReadOnly(true); refreshDynamic();
+    });
+  }
+  function doSolution() {
+    var st = S(curQ());
+    st.showSol = true;
+    if (st.status === 'open') { st.status = 'revealed'; if (st.circuit === null && editor) st.circuit = editor.getCircuit(); if (editor) editor.setReadOnly(true); }
+    refreshDynamic();
+    scrollToFeedback();
+  }
+  function go(i) {
+    if (i < 0 || i >= state.order.length) return;
+    state.idx = i; render();
+  }
+  function finish() {
+    var ids = state.order, drill = state.mode === 'drill';
+    var open = ids.filter(function (qi) { return S(qi).status === 'open'; });
+    function show() {
+      if (drill) state.drillNote = { n: ids.length, k: ids.filter(function (qi) { return S(qi).status === 'solved'; }).length };
+      backToResults();
+    }
+    if (!open.length) { show(); return; }
+    confirmModal(drill ? 'Finish the drill?' : 'Finish the quiz?',
+      E.plural(open.length, 'question') + ' still unanswered \u2014 ' + (drill ? 'they stay uncorrected for now.' : 'unanswered questions count as incorrect.'),
+      'Finish', 'Keep working').then(function (ok) { if (ok) show(); });
+  }
+
+  /* ---------------------------------------------------------- results (always the MAIN run) */
+  function detailHTML(qi) {
+    var q = Q.questions[qi], st = state.qs[qi], cfg = CFG[qi], dr = state.corrected[qi] ? state.dq[qi] : null;
+    var last = st.attempts.length ? st.attempts[st.attempts.length - 1] : null;
+    var h = '<div class="detail"><div class="pair"><div><h4>' + (q.type === 'circuit' ? 'Your submitted circuit' : 'Your submitted answer') + '</h4>', lastIssues = '';
+    if (q.type === 'expression') {
+      var typed = last ? last.answer : (st.draft || '');
+      h += typed ? '<p><code class="fx big">' + fx(answerLine(q, cfg, typed)) + '</code></p>' : '<p class="muted">No answer was submitted.</p>';
+      if (last && last.result.issues.length) lastIssues = last.result.issues.map(function (is) { return '<li>' + esc(is.text) + '</li>'; }).join('');
+    } else if (q.type === 'steps') {
+      var any = last || q.steps.some(function (x, i) { return typeof st.sel[i] === 'number'; });
+      h += any ? stepsListHTML(q, last ? last.answer : st.sel, last ? last.result : null) : '<p class="muted">No answer was submitted.</p>';
+    } else {
+      var circ = last ? last.circuit : st.circuit;
+      h += (circ && (circ.gates.length || circ.wires.length)) ? E.renderStatic(circ, cfg) : '<p class="muted">No circuit was submitted.</p>';
+      if (last && last.result.issues.length) lastIssues = last.result.issues.map(function (is) { return '<li>' + esc(is.text) + '</li>'; }).join('');
+    }
+    if (lastIssues && q.type !== 'steps') h += '<p class="att-head">Last check:</p><ul class="issues">' + lastIssues + '</ul>';
+    h += '</div>';
+    if (dr) {
+      if (q.type === 'expression') h += '<div><h4>🎯 Your corrected answer <span class="muted small">(solved in practice)</span></h4><p><code class="fx big">' + fx(answerLine(q, cfg, dr.draft || (dr.attempts.length ? dr.attempts[dr.attempts.length - 1].answer : ''))) + '</code></p></div>';
+      else if (q.type === 'steps') h += '<div><h4>🎯 Your corrected answer <span class="muted small">(solved in practice)</span></h4>' + stepsListHTML(q, dr.attempts[dr.attempts.length - 1].answer, dr.attempts[dr.attempts.length - 1].result) + '</div>';
+      else if (dr.circuit) h += '<div><h4>🎯 Your corrected circuit <span class="muted small">(solved in practice)</span></h4>' + E.renderStatic(dr.circuit, cfg) + '</div>';
+    }
+    if (q.type === 'expression') {
+      var ma = modelAnswerText(q);
+      h += '<div><h4>Author’s model answer</h4>' + (ma ? '<p><code class="fx big">' + fx(answerLine(q, cfg, ma)) + '</code></p>' :
+        '<p class="muted">No model answer was provided. Any expression equal to <code class="fx">' + fx(q.target) + '</code> that follows the listed rules is accepted.</p>') + '</div>';
+    } else if (q.type === 'steps') {
+      h += '<div><h4>Correct choices</h4><ol class="steps-att">' + q.steps.map(function (stp) { return '<li class="ok"><span class="muted">' + esc(stp.label) + '</span><br><b>✓ ' + esc(stp.options[stp.correct]) + '</b></li>'; }).join('') + '</ol></div>';
+    } else {
+      h += '<div><h4>Author’s solution</h4>' + ((q.solution && q.solution.gates.length) ? E.renderStatic(q.solution, cfg) : '<p class="muted">No reference circuit was provided.</p>') + '</div>';
+    }
+    h += '</div><h4 style="margin-top:1rem">Explanation</h4><div class="rich">' +
+      (q.explanationHTML ? E.sanitizeHTML(q.explanationHTML) : '<p class="muted">No explanation provided.</p>') + '</div></div>';
+    return h;
+  }
+
+  function renderResults() {
+    var all = allIdx(), t = tally(), missed = missedList(), fixed = missed.filter(function (qi) { return state.corrected[qi]; });
+    var h = '';
+    if (state.drillNote) {
+      h += '<div class="banner corr">🎯 Drill finished — you corrected ' + state.drillNote.k + ' of ' + state.drillNote.n + ' practice ' +
+        (state.drillNote.n === 1 ? 'question' : 'questions') + '. Your main score below is unchanged.</div>';
+    }
+    h += '<section class="card"><h2 style="margin-bottom:.2em">Results</h2>' +
+      '<div class="res-top"><div class="score">' + Math.round(t.pct) + '%</div><div>' +
+      '<div class="bar ' + (t.pct >= 90 ? 'ok' : 'bad') + '"><i style="width:' + t.pct.toFixed(1) + '%"></i><u title="90% threshold"></u></div>' +
+      '<p class="muted" style="margin:.4rem 0 0">' + t.passN + ' of ' + all.length + ' questions passed · weighted score ' + t.passW.toFixed(t.passW % 1 ? 1 : 0) + ' / ' + t.totalW.toFixed(t.totalW % 1 ? 1 : 0) +
+      ' · ' + (state.strict ? 'strict mode' : 'practice mode') + '</p></div></div>';
+    h += '<div class="res-actions">' +
+      '<button type="button" class="btn primary" data-act="retake">↻ Retake Quiz</button>' +
+      (missed.length ? '<button type="button" class="btn aqua" data-act="drill" title="Replay only the questions you missed or skipped">🎯 Retake Missed Questions</button>'
+        : '<span class="chip">🎉 Nothing missed — great work!</span>') +
+      '<button type="button" class="btn ghost" data-act="home">Back to start</button></div>';
+    if (missed.length) {
+      h += '<p class="muted small" style="margin:.7rem 0 0" id="missedNote">' + E.plural(missed.length, 'question') + ' missed or skipped' +
+        (fixed.length ? ' · <b class="aq-text">🎯 ' + fixed.length + ' corrected in practice</b> (your score above does not change)' : '') + '.</p>';
+    }
+    h += '</section>';
+
+    h += '<section class="card" style="margin-top:1rem"><h3>Performance by subject</h3><p class="muted small" style="margin-top:-.3rem">Weighted by question weight. ✅ = 90% or higher, ❌ = below 90%.</p>';
+    t.names.forEach(function (n) {
+      var s = t.subj[n], p = s.tot ? s.pass / s.tot * 100 : 0, good = p >= 90;
+      h += '<div class="subj"><div class="subj-h"><span>' + esc(n) + ' <span class="muted small">(' + s.np + '/' + s.n + ' passed)</span></span><span>' + Math.round(p) + '% ' + (good ? '✅' : '❌') + '</span></div>' +
+        '<div class="bar ' + (good ? 'ok' : 'bad') + '"><i style="width:' + p.toFixed(1) + '%"></i><u></u></div></div>';
+    });
+    h += '</section><div class="res-tools"><h3 style="margin:0">Question review</h3><button type="button" class="btn sm" data-act="expand">' + (Object.keys(state.expand).length >= all.length ? 'Collapse all' : 'Show all solutions') + '</button></div>';
+    all.forEach(function (qi, i) {
+      var q = Q.questions[qi], o = outcome(qi), open = !!state.expand[qi], corr = !o.pass && !!state.corrected[qi];
+      h += '<div class="qrow' + (corr ? ' corrected' : '') + '" data-q="' + qi + '"><div class="qrow-h"><span class="qrow-n">' + (i + 1) + '</span><div class="qrow-t"><b>' + esc(E.htmlToText(q.promptHTML).slice(0, 110) || q.target) + '</b>' +
+        '<span class="chip plain">' + esc(subjectOf(q)) + '</span> <span class="muted small">×' + q.weight + ' · ' + E.plural(state.qs[qi].attempts.length, 'attempt') + '</span></div>' +
+        '<span class="stbox"><span class="st ' + o.cls + '">' + o.icon + ' ' + esc(o.label) + '</span>' +
+        (corr ? '<span class="corr-chip" title="Solved in practice! Your score is unchanged.">🎯 Corrected!</span><small class="aq-text">Solved in practice!</small>' : '') + '</span>' +
+        '<button type="button" class="btn sm" data-toggle="' + qi + '" aria-expanded="' + open + '">' + (open ? 'Hide' : 'View') + ' solution &amp; circuit</button></div>' +
+        (open ? detailHTML(qi) : '') + '</div>';
+    });
+    screen.innerHTML = h;
+  }
+
+  /* ---------------------------------------------------------- events */
+  screen.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'exprIn') onExprInput();
+  });
+  screen.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.matches && t.matches('select[data-step]')) {
+      var st = S(curQ()), i = +t.getAttribute('data-step');
+      st.sel[i] = t.value === '' ? null : +t.value;
+      flash(''); syncAnswer();
+    }
+  });
+  screen.addEventListener('keydown', function (e) {
+    if (e.target.id === 'exprIn' && e.key === 'Enter') { e.preventDefault(); doCheck(); }
+  });
+  screen.addEventListener('click', function (e) {
+    var kb = e.target.closest('[data-key]');
+    if (kb) { insertKey(kb.getAttribute('data-key')); return; }
+    var t = e.target.closest('[data-act],[data-go],[data-toggle]');
+    if (!t) return;
+    if (t.hasAttribute('data-go')) {
+      go(+t.getAttribute('data-go'));
+      var cp = $('.pill.cur'); if (cp && cp.focus) { try { cp.focus({ preventScroll: true }); } catch (err) { /* ignore */ } }   /* keep keyboard users on the picker */
+      return;
+    }
+    if (t.hasAttribute('data-toggle')) {
+      var qi = +t.getAttribute('data-toggle');
+      if (state.expand[qi]) delete state.expand[qi]; else state.expand[qi] = true;
+      var y = window.scrollY; renderResults(); window.scrollTo(0, y);
+      return;
+    }
+    switch (t.getAttribute('data-act')) {
+      case 'start': var chk = $('#chkStrict'); state.strict = !!(chk && chk.checked); startMain(); break;
+      case 'hint': var st = S(curQ()); st.hints++; refreshDynamic(); break;
+      case 'mark': var mq = curQ(); if (state.marked[mq]) delete state.marked[mq]; else state.marked[mq] = true; refreshDynamic(); break;
+      case 'check': doCheck(); break;
+      case 'skip': doSkip(); break;
+      case 'solution': doSolution(); break;
+      case 'prev': go(state.idx - 1); break;
+      case 'next': go(state.idx + 1); break;
+      case 'finish': finish(); break;
+      case 'results': backToResults(); break;
+      case 'expand':
+        if (Object.keys(state.expand).length >= Q.questions.length) state.expand = {};
+        else allIdx().forEach(function (k) { state.expand[k] = true; });
+        renderResults(); break;
+      case 'drill': startDrill(); break;
+      case 'retake': startMain(); break;
+      case 'home': state.mode = 'main'; state.drillNote = null; state.strict = true; state.screen = 'title'; render(); break;   /* the title screen always offers strict mode as the default */
+    }
+  });
+
+  render();
+})();
+
+
+</script>
+</body>
+</html>
